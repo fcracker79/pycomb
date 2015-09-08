@@ -13,6 +13,14 @@ class TestCombinators(TestCase):
 
         self.assertEqual(str, type(s))
 
+    def test_list_2(self):
+        List = c.list(c.Int)
+
+        l = List([1, 2, 3])
+        l2 = List(l)
+
+        self.assertTrue(l is l2)
+
     def test_list(self):
         with(self.assertRaises(ValueError)):
             c.list(c.String)('hello')

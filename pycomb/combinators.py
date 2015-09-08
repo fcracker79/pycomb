@@ -25,6 +25,9 @@ def list(combinator_element):
     def List(x):
         _assert(List.is_type(x))
 
+        if type(x) == tuple:
+            return x
+
         result = ()
         for d in x:
             result += (combinator_element(d), )
