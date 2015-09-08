@@ -1,4 +1,3 @@
-from functools import reduce
 from pycomb.predicates import is_int, is_float, is_string, is_list_of, is_struct_of, StructType
 
 
@@ -41,7 +40,8 @@ def struct(combinators):
 
         return x if type(x) == StructType else StructType(x)
 
-    Struct.is_type = lambda d: is_struct_of(d, combinators)
+    Struct.is_type = lambda d: is_struct_of(d, combinators) or \
+                               type(d) == dict and all(combinators[k].is_type(d[k]) for k in combinators)
 
     return Struct
 

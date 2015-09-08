@@ -24,7 +24,4 @@ def is_struct_of(d, combinators):
     if len(d) != len(combinators):
         return False
 
-    if type(d) == StructType:
-        return True
-
-    return all(combinators[k].is_type(d[k]) for k in combinators)
+    return type(d) == StructType
