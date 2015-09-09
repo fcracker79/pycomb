@@ -72,6 +72,12 @@ class TestCombinators(TestCase):
 
         self.assertEqual(StructType, type(r))
 
+    def test_struct_of_struct(self):
+        r = c.struct({'name': c.String, 'data': c.struct({'age': c.Int})})({'name': 'Mirko', 'data': {'age': 36}})
+
+        self.assertEqual('Mirko', r.name)
+        self.assertEqual(36, r.data.age)
+
     def test_maybe(self):
         with(self.assertRaises(ValueError)):
             c.String(None)
