@@ -1,4 +1,4 @@
-from pycomb.predicates import is_int, is_float, is_string, is_list_of, is_struct_of, StructType
+from pycomb import predicates as p
 
 def _get_type_name(type):
     return type.meta['name']
@@ -15,27 +15,44 @@ def _setup_paths_and_contexts(type, ctx, name):
 
     return {'path': path}
 
-def _get_derivated_name(base_name, *combinators):
-    if type(combinators) is dict:
-        combinators_str = map(lambda k: '{}: {}'.format(k, _get_type_name(combinators[k])), combinators)
-    elif type(combinators) is list or type(combinators) is tuple:
-        combinators_str = map(lambda c: _get_type_name(c), combinators)
-    else:
-        combinators_str = _get_type_name(*combinators)
+def _dict_serializer(combinators, base_name, get_name_function):
+    if type(combinators) == dict:
+        map_result = ', '.join(map(lambda k: '{}: {}'.format(k, get_name_function(combinators[k])), combinators))
+        return '{} {{{}}}'.format(base_name, map_result)
 
-    return '{} ({})'.format(
-        base_name,
-        combinators_str)
+    return None
 
+def _list_serializer(combinators, base_name, get_name_function):
+    if type(combinators) in (list, tuple):
+        list_result = ', '.join(map(lambda x: get_name_function(x), combinators))
+        return '{} [{}]'.format(base_name, list_result)
+
+    return None
+
+def _default_element_serializer(combinators, _, __):
+    return _get_type_name(combinators)
+
+ELEMENTS_SERIALIZERS = (_dict_serializer, _list_serializer, _default_element_serializer)
+
+def _get_derivated_name(base_name, combinators):
+    result = None
+    for serializer in ELEMENTS_SERIALIZERS:
+        result = serializer(combinators, base_name, lambda d: _get_derivated_name(_get_type_name(d), d))
+        if result:
+            break
+
+    assert result is not None
+
+    return result
 
 def _assert(guard, ctx=None, found_type=None):
     path = _get_path(ctx)
     if not guard:
         if len(path):
             expected = path[-1]
-            raise ValueError('Error on {}: expected {} but was {}'.format(path, expected, found_type))
+            raise ValueError('Error on {}: expected {} but was {}'.format(path, expected, found_type.__name__))
         else:
-            raise ValueError('Error on {}:  was {}'.format(path, found_type))
+            raise ValueError('Error on {}:  was {}'.format(path, found_type.__name__))
 
 def irreducible(predicate, name='Irreducible'):
     def Irreducible(value, ctx=None):
@@ -53,9 +70,9 @@ def irreducible(predicate, name='Irreducible'):
     return Irreducible
 
 
-Int = irreducible(is_int, name='Int')
-Float = irreducible(is_float, name='Float')
-String = irreducible(is_string, name='String')
+Int = irreducible(p.is_int, name='Int')
+Float = irreducible(p.is_float, name='Float')
+String = irreducible(p.is_string, name='String')
 
 
 def list(combinator_element, name=None):
@@ -74,7 +91,7 @@ def list(combinator_element, name=None):
             result += (combinator_element(d, ctx=new_ctx), )
         return result
 
-    List.is_type = lambda d: is_list_of(d, combinator_element)
+    List.is_type = lambda d: p.is_list_of(d, combinator_element)
     List.meta = {
         'name': name
     }
@@ -86,14 +103,15 @@ def struct(combinators, name=None):
 
     def Struct(x, ctx=None):
         new_ctx = _setup_paths_and_contexts(Struct, ctx, name)
-        _assert(Struct.is_type(x), ctx=new_ctx, found_type=type(x))
 
-        if type(x) == StructType:
+        _assert(Struct.is_type(x) or type(x) is dict, ctx=new_ctx, found_type=type(x))
+
+        if type(x) == p.StructType:
             return x
 
-        return StructType({k: combinators[k](x[k], ctx=new_ctx) for k in combinators})
+        return p.StructType({k: combinators[k](x[k], ctx=new_ctx) for k in combinators})
 
-    Struct.is_type = lambda d: is_struct_of(d, combinators) or \
+    Struct.is_type = lambda d: p.is_struct_of(d, combinators) or \
                                type(d) == dict and all(combinators[k].is_type(d[k]) for k in combinators)
 
     Struct.meta = {

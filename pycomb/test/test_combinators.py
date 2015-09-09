@@ -78,6 +78,14 @@ class TestCombinators(TestCase):
         self.assertEqual('Mirko', r.name)
         self.assertEqual(36, r.data.age)
 
+        exception = None
+        try:
+            c.struct({'name': c.String, 'data': c.struct({'age': c.Int})})({'name': 'Mirko', 'data': {'age': '36'}})
+        except ValueError as e:
+            exception = e
+
+        print(exception.args[0])
+        self.assertEqual('Error on [\'Struct {name: String, data: Struct {age: Int}}\', \'Struct {age: Int}\', \'Int\']: expected Int but was str', exception.args[0])
     def test_maybe(self):
         with(self.assertRaises(ValueError)):
             c.String(None)
