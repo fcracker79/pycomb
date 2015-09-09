@@ -1,3 +1,6 @@
+from pycomb.combinators import _new_ctx
+
+
 def typedef(*args, **kwargs):
     def wrapper(fun):
         def f(*inner_args, **inner_kwargs):
@@ -19,7 +22,7 @@ def returning(combinator):
         def f(*inner_args, **inner_kwargs):
             result = fun(*inner_args, **inner_kwargs)
 
-            return combinator(result)
+            return combinator(result, ctx=_new_ctx())
         return f
 
     return wrapper
