@@ -174,3 +174,19 @@ class TestCombinators(TestCase):
 
 
         self.assertEqual('Error on Enum(V1: 1, V2: 2, V3: 3): expected V1 or V2 or V3 but was V4', e.args[0])
+
+    def test_enums_list(self):
+        Enum = c.enum.of(['a', 'b', 'c'])
+
+        self.assertEqual('a', Enum('a'))
+        self.assertEqual('b', Enum('b'))
+        self.assertEqual('c', Enum('c'))
+
+        e = None
+        try:
+            Enum('V4')
+        except ValueError as ex:
+            e = ex
+
+
+        self.assertEqual('Error on Enum(a: a, b: b, c: c): expected a or b or c but was V4', e.args[0])

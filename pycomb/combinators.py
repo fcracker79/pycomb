@@ -215,3 +215,5 @@ def enum(values, name=None):
     Enum.__dict__ = enum_dict
 
     return Enum
+
+enum.of = lambda l, name=None: enum({k: k for k in l}, name=name)
