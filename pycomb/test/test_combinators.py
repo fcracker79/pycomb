@@ -122,7 +122,6 @@ class TestCombinators(TestCase):
 
         self.assertEqual('Error on Subtype(String): expected Subtype(String) but was str', e.args[0])
 
-
         self.assertEqual('12345', SmallString('12345'))
 
     def test_union(self):
@@ -156,3 +155,22 @@ class TestCombinators(TestCase):
         self.assertEqual(
             'Error on Intersection(Struct{name: String}, Struct{age: Int}): expected Struct{name: String} or Struct{age: Int} but was dict',
             e.args[0])
+
+    def test_enums(self):
+        Enum = c.enum({'V1': '1', 'V2': '2', 'V3': '3'})
+
+        self.assertEqual('1', Enum.V1)
+        self.assertEqual('2', Enum.V2)
+        self.assertEqual('3', Enum.V3)
+
+        e = Enum('V1')
+        self.assertEqual('1', e)
+
+        e = None
+        try:
+            Enum('V4')
+        except ValueError as ex:
+            e = ex
+
+
+        self.assertEqual('Error on Enum(V1: 1, V2: 2, V3: 3): expected V1 or V2 or V3 but was V4', e.args[0])

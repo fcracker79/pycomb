@@ -20,7 +20,8 @@ def _default_element_serializer(combinators, _, __):
 def _assert(guard, ctx=None, expected=None, found_type=None):
     path = _get_path(ctx)
     if not guard:
-        raise ValueError('Error on {}: expected {} but was {}'.format(''.join(path), expected, found_type.__name__))
+        found_type = found_type if type(found_type) is str else found_type.__name__
+        raise ValueError('Error on {}: expected {} but was {}'.format(''.join(path), expected, found_type))
 
 def irreducible(predicate, name='Irreducible'):
     def Irreducible(value, ctx=None):
@@ -185,3 +186,32 @@ def subtype(combinator, condition, name=None):
     }
 
     return Subtype
+
+def enum(values, name=None):
+    sorted_enums = __builtins__['list'](values.keys())
+    sorted_enums.sort()
+
+    if not name:
+        name = 'Enum({})'.format(', '.join(map(lambda k: '{}: {}'.format(k, values[k]), sorted_enums)))
+
+    def Enum(x, ctx=None):
+        new_ctx = _setup_paths_and_contexts(Enum, ctx, name)
+
+        _assert(Enum.is_type(x), ctx=new_ctx,
+                expected=' or '.join(sorted_enums),
+                found_type=str(x))
+
+        return values[x]
+
+    Enum.is_type = lambda d: d in values
+    Enum.meta = {
+        'name': name,
+        map: values
+    }
+
+    enum_dict = {}
+    enum_dict.update(Enum.__dict__)
+    enum_dict.update(values)
+    Enum.__dict__ = enum_dict
+
+    return Enum
