@@ -4,61 +4,29 @@ def _get_type_name(type):
     return type.meta['name']
 
 def _get_path(ctx):
-    return ctx['path']
+    return ctx['path'] if ctx else []
 
 def _new_ctx():
     return {'path': []}
 
 def _setup_paths_and_contexts(type, ctx, name):
     path = _get_path(ctx) + [name] if ctx else [name]
-    type.Meta = {'path': path}
 
     return {'path': path}
-
-def _dict_serializer(combinators, base_name, get_name_function):
-    if type(combinators) == dict:
-        map_result = ', '.join(map(lambda k: '{}: {}'.format(k, get_name_function(combinators[k])), combinators))
-        return '{} {{{}}}'.format(base_name, map_result)
-
-    return None
-
-def _list_serializer(combinators, base_name, get_name_function):
-    if type(combinators) in (list, tuple):
-        list_result = ', '.join(map(lambda x: get_name_function(x), combinators))
-        return '{} [{}]'.format(base_name, list_result)
-
-    return None
 
 def _default_element_serializer(combinators, _, __):
     return _get_type_name(combinators)
 
-ELEMENTS_SERIALIZERS = (_dict_serializer, _list_serializer, _default_element_serializer)
-
-def _get_derivated_name(base_name, combinators):
-    result = None
-    for serializer in ELEMENTS_SERIALIZERS:
-        result = serializer(combinators, base_name, lambda d: _get_derivated_name(_get_type_name(d), d))
-        if result:
-            break
-
-    assert result is not None
-
-    return result
-
-def _assert(guard, ctx=None, found_type=None):
+def _assert(guard, ctx=None, expected=None, found_type=None):
     path = _get_path(ctx)
     if not guard:
-        if len(path):
-            expected = path[-1]
-            raise ValueError('Error on {}: expected {} but was {}'.format(path, expected, found_type.__name__))
-        else:
-            raise ValueError('Error on {}:  was {}'.format(path, found_type.__name__))
+        raise ValueError('Error on {}: expected {} but was {}'.format(''.join(path), expected, found_type.__name__))
 
 def irreducible(predicate, name='Irreducible'):
     def Irreducible(value, ctx=None):
-        new_ctx = _setup_paths_and_contexts(Irreducible, ctx, name)
+        new_ctx = _setup_paths_and_contexts(Irreducible, ctx, '' if _get_path(ctx) else name)
 
-        _assert(Irreducible.is_type(value), ctx=new_ctx, found_type=type(value))
+        _assert(Irreducible.is_type(value), ctx=new_ctx, expected=name, found_type=type(value))
 
         return value
 
@@ -77,21 +45,23 @@ String = irreducible(p.is_string, name='String')
 
 def list(combinator_element, name=None):
     if not name:
-        name = _get_derivated_name('List', combinator_element)
+        name = 'List({})'.format(_get_type_name(combinator_element))
 
     def List(x, ctx=None):
-        new_ctx = _setup_paths_and_contexts(List, ctx, name)
-        _assert(List.is_type(x), ctx=new_ctx, found_type=type(x))
 
-        if type(x) == tuple:
-            return x
+        new_ctx_list = _setup_paths_and_contexts(List, ctx, '' if _get_path(ctx) else name)
+        _assert(List.is_type(x), ctx=new_ctx_list, found_type=type(x))
 
-        result = ()
+        result = []
+        i = 0
         for d in x:
-            result += (combinator_element(d, ctx=new_ctx), )
-        return result
+            new_ctx = _setup_paths_and_contexts(List, new_ctx_list, '[{}]'.format(i) if _get_path(new_ctx_list) else name)
+            result.append(combinator_element(d, ctx=new_ctx))
+            i += 1
 
-    List.is_type = lambda d: p.is_list_of(d, combinator_element)
+        return tuple(result)
+
+    List.is_type = lambda d: type(d) in (__builtins__['list'], tuple)
     List.meta = {
         'name': name
     }
@@ -99,17 +69,21 @@ def list(combinator_element, name=None):
 
 def struct(combinators, name=None):
     if not name:
-        name = _get_derivated_name('Struct', combinators)
+        name = 'Struct{{{}}}'.format(''.join(
+            ', '.join(map(lambda k: '{}: {}'.format(k, _get_type_name(combinators[k])), combinators))))
 
     def Struct(x, ctx=None):
-        new_ctx = _setup_paths_and_contexts(Struct, ctx, name)
-
-        _assert(Struct.is_type(x) or type(x) is dict, ctx=new_ctx, found_type=type(x))
+        _assert(Struct.is_type(x) or type(x) is dict, ctx=ctx, expected=name, found_type=type(x))
 
         if type(x) == p.StructType:
             return x
 
-        return p.StructType({k: combinators[k](x[k], ctx=new_ctx) for k in combinators})
+        new_dict = {}
+        for k in combinators:
+            selector = '[{}]'.format(k) if _get_path(ctx) else '{}[{}]'.format(name, k)
+            new_ctx = _setup_paths_and_contexts(Struct, ctx, selector)
+            new_dict[k] = combinators[k](x[k], ctx=new_ctx)
+        return p.StructType(new_dict)
 
     Struct.is_type = lambda d: p.is_struct_of(d, combinators) or \
                                type(d) == dict and all(combinators[k].is_type(d[k]) for k in combinators)
@@ -121,7 +95,7 @@ def struct(combinators, name=None):
 
 def maybe(combinator, name=None):
     if not name:
-        name = _get_derivated_name('Maybe', combinator)
+        name = 'Maybe ({})'.format(_get_type_name(combinator))
 
     def Maybe(x, ctx=None):
         new_ctx = _setup_paths_and_contexts(Maybe, ctx, name)
@@ -145,7 +119,7 @@ def _default_composite_dispatcher(x, combinators):
 
 def union(*combinators, name=None, dispatcher=None):
     if not name:
-        name = _get_derivated_name('Union', combinators)
+        name = 'Union({})'.format(''.join(map(lambda d: _get_type_name(d), combinators)))
 
     def Union(x, ctx=None):
         new_ctx = _setup_paths_and_contexts(Union, ctx, name)
@@ -169,7 +143,8 @@ def union(*combinators, name=None, dispatcher=None):
 
 def intersection(*combinators, name=None, dispatcher=None):
     if not name:
-        name = _get_derivated_name('Union', combinators)
+        name = 'Intersection({})'.format(
+            ''.map(lambda d: _get_type_name(d), combinators))
 
     def Intersection(x, ctx=None):
         new_ctx = _setup_paths_and_contexts(Intersection, ctx, name)

@@ -13,20 +13,24 @@ class TestCombinators(TestCase):
 
         self.assertEqual(str, type(s))
 
-    def test_list_2(self):
-        List = c.list(c.Int)
-
-        l = List([1, 2, 3])
-        l2 = List(l)
-
-        self.assertTrue(l is l2)
-
     def test_list(self):
         with(self.assertRaises(ValueError)):
             c.list(c.String)('hello')
 
         with(self.assertRaises(ValueError)):
             c.list(c.String)([1, 2, 3])
+
+        e = None
+
+        try:
+            c.list(c.String)(['1', 2, '3'])
+        except Exception as ex:
+            e = ex
+
+        self.assertIsInstance(e, ValueError)
+
+        expected = 'Error on List(String)[1]: expected String but was int'
+        self.assertEquals(expected, e.args[0])
 
         l = c.list(c.String)(['a', 'b'])
         self.assertEqual(tuple, type(l))
@@ -52,8 +56,16 @@ class TestCombinators(TestCase):
         with(self.assertRaises(ValueError)):
             c.struct(d)('hello')
 
-        with(self.assertRaises(ValueError)):
+        e = None
+        try:
             c.struct(d)({'name': 0, 'value': 1})
+        except ValueError as ex:
+            e = ex
+
+        self.assertTrue(
+            e.args[0] in
+                ('Error on Struct{name: String, value: Int}[name]: expected String but was int',
+                'Error on Struct{value: Int, name: String}[name]: expected String but was int'))
 
         result = c.struct(d)({'name': 'myName', 'value': 1})
         self.assertEqual('myName', result.name)
@@ -85,7 +97,12 @@ class TestCombinators(TestCase):
             exception = e
 
         print(exception.args[0])
-        self.assertEqual('Error on [\'Struct {name: String, data: Struct {age: Int}}\', \'Struct {age: Int}\', \'Int\']: expected Int but was str', exception.args[0])
+        self.assertTrue(
+            exception.args[0] in (
+                'Error on Struct{data: Struct{age: Int}, name: String}[data][age]: expected Int but was str',
+                'Error on Struct{name: String, data: Struct{age: Int}}[data][age]: expected Int but was str',
+            ))
+
     def test_maybe(self):
         with(self.assertRaises(ValueError)):
             c.String(None)
