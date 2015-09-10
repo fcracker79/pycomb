@@ -114,8 +114,14 @@ class TestCombinators(TestCase):
     def test_subtype(self):
         SmallString = c.subtype(c.String, lambda d: len(d) <= 10)
 
-        with(self.assertRaises(ValueError)):
+        e = None
+        try:
             SmallString('12345678901')
+        except ValueError as ex:
+            e = ex
+
+        self.assertEqual('Error on Subtype(String): expected Subtype(String) but was str', e.args[0])
+
 
         self.assertEqual('12345', SmallString('12345'))
 
@@ -125,5 +131,28 @@ class TestCombinators(TestCase):
         self.assertEqual(1.0, Number(1.0))
         self.assertEqual(2, Number(2))
 
-        with(self.assertRaises(ValueError)):
+        e = None
+        try:
             Number('hello')
+        except ValueError as ex:
+            e = ex
+
+        self.assertEqual('Error on Union(Int, Float): expected Int or Float but was str', e.args[0])
+
+    def test_intersection(self):
+        name_type = c.struct({'name': c.String})
+        age_type = c.struct({'age': c.Int})
+        my_type = c.intersection(name_type, age_type)
+
+        d = my_type({'name': 'mirko', 'age': 36})
+        self.assertEqual('mirko', d.name)
+
+        e = None
+        try:
+            my_type({'name': 'mirko', 'age': '36'})
+        except ValueError as ex:
+            e = ex
+
+        self.assertEqual(
+            'Error on Intersection(Struct{name: String}, Struct{age: Int}): expected Struct{name: String} or Struct{age: Int} but was dict',
+            e.args[0])

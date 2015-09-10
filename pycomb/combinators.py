@@ -119,11 +119,12 @@ def _default_composite_dispatcher(x, combinators):
 
 def union(*combinators, name=None, dispatcher=None):
     if not name:
-        name = 'Union({})'.format(''.join(map(lambda d: _get_type_name(d), combinators)))
+        name = 'Union({})'.format(', '.join(map(lambda d: _get_type_name(d), combinators)))
 
     def Union(x, ctx=None):
         new_ctx = _setup_paths_and_contexts(Union, ctx, name)
-        _assert(Union.is_type(x), ctx=new_ctx, found_type=type(x))
+        _assert(Union.is_type(x), ctx=new_ctx,
+                expected=' or '.join(map(lambda d: _get_type_name(d), combinators)), found_type=type(x))
 
         if dispatcher:
             default_combinator = dispatcher(x)
@@ -144,11 +145,13 @@ def union(*combinators, name=None, dispatcher=None):
 def intersection(*combinators, name=None, dispatcher=None):
     if not name:
         name = 'Intersection({})'.format(
-            ''.map(lambda d: _get_type_name(d), combinators))
+            ', '.join(map(lambda d: _get_type_name(d), combinators)))
 
     def Intersection(x, ctx=None):
         new_ctx = _setup_paths_and_contexts(Intersection, ctx, name)
-        _assert(Intersection.is_type(x), ctx=new_ctx, found_type=type(x))
+        _assert(Intersection.is_type(x), ctx=new_ctx,
+                expected=' or '.join(map(lambda d: _get_type_name(d), combinators)),
+                found_type=type(x))
 
         if dispatcher:
             default_combinator = dispatcher(x)
@@ -156,19 +159,22 @@ def intersection(*combinators, name=None, dispatcher=None):
         else:
             default_combinator =_default_composite_dispatcher(x, combinators)
 
-        return default_combinator(x, ctx=new_ctx)
-
-        return x
+        return default_combinator(x, ctx=ctx)
 
     Intersection.meta = {
         'name': name
     }
     Intersection.is_type = lambda d: all(combinator.is_type(d) for combinator in combinators)
 
-def subtype(combinator, condition, name='Subtype'):
+    return Intersection
+
+def subtype(combinator, condition, name=None):
+    if not name:
+        name = 'Subtype({})'.format(_get_type_name(combinator))
+
     def Subtype(x, ctx=None):
         new_ctx = _setup_paths_and_contexts(Subtype, ctx, name)
-        _assert(Subtype.is_type(x), ctx=new_ctx, found_type=type(x))
+        _assert(Subtype.is_type(x), ctx=new_ctx, expected=name, found_type=type(x))
 
         return combinator(x, new_ctx)
 

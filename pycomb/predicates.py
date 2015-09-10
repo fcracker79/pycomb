@@ -21,7 +21,4 @@ class StructType:
             raise TypeError
 
 def is_struct_of(d, combinators):
-    if len(d) != len(combinators):
-        return False
-
     return type(d) == StructType
