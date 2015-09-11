@@ -182,6 +182,10 @@ class TestCombinators(TestCase):
         self.assertEqual('b', Enum('b'))
         self.assertEqual('c', Enum('c'))
 
+        self.assertEqual('a', Enum.a)
+        self.assertEqual('b', Enum.b)
+        self.assertEqual('c', Enum.c)
+
         e = None
         try:
             Enum('V4')
