@@ -1,4 +1,5 @@
 from unittest import TestCase
+from unittest.mock import Mock
 from pycomb import combinators as c
 from pycomb.predicates import StructType
 
@@ -172,7 +173,6 @@ class TestCombinators(TestCase):
         except ValueError as ex:
             e = ex
 
-
         self.assertEqual('Error on Enum(V1: 1, V2: 2, V3: 3): expected V1 or V2 or V3 but was V4', e.args[0])
 
     def test_enums_list(self):
@@ -192,5 +192,45 @@ class TestCombinators(TestCase):
         except ValueError as ex:
             e = ex
 
-
         self.assertEqual('Error on Enum(a: a, b: b, c: c): expected a or b or c but was V4', e.args[0])
+
+    def test_function(self):
+        Fun = c.function(c.String, c.Int, a=c.Float, b=c.enum.of(['X', 'Y', 'Z']))
+
+        f = Mock()
+
+        new_f = Fun(f)
+        self.assertTrue(callable(new_f))
+
+        e = None
+        try:
+            new_f()
+        except ValueError as ex:
+            e = ex
+
+        self.assertTrue(
+            e.args[0] in (
+                'Error on Function(String, Int, a=Float, b=Enum(X: X, Y: Y, Z: Z)): expected 2 arguments but was 0 arguments',
+                'Error on Function(String, Int, b=Enum(X: X, Y: Y, Z: Z), a=Float): expected 2 arguments but was 0 arguments'
+            )
+        )
+
+        e = None
+        try:
+            Fun('Hello')
+        except ValueError as ex:
+            e = ex
+
+        self.assertTrue(e.args[0] in (
+            'Error on Function(String, Int, b=Enum(X: X, Y: Y, Z: Z), a=Float): expected Function(String, Int, b=Enum(X: X, Y: Y, Z: Z), a=Float) but was str',
+            'Error on Function(String, Int, a=Float, b=Enum(X: X, Y: Y, Z: Z)): expected Function(String, Int, a=Float, b=Enum(X: X, Y: Y, Z: Z)) but was str'
+        ))
+
+        f = lambda x1, x2, a=None, b=None: None
+        g = Fun(f)
+
+        self.assertIsNot(f, g)
+
+        g2 = Fun(g)
+
+        self.assertIs(g, g2)

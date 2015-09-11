@@ -1,11 +1,11 @@
 from unittest import TestCase
 from pycomb import combinators as c
-from pycomb.decorators import typedef, returning
+from pycomb.decorators import returning
 
 
 class TestDecorators(TestCase):
     def test(self):
-        @typedef(c.String, c.Int, c=c.Float, d=c.list(c.Int))
+        @c.function(c.String, c.Int, c=c.Float, d=c.list(c.Int))
         def f(a, b, c=None, d=None):
             pass
 

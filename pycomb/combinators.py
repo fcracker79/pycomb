@@ -1,18 +1,6 @@
 from pycomb import predicates as p
+from pycomb.base import _get_type_name, _get_path, _setup_paths_and_contexts, _new_ctx
 
-def _get_type_name(type):
-    return type.meta['name']
-
-def _get_path(ctx):
-    return ctx['path'] if ctx else []
-
-def _new_ctx():
-    return {'path': []}
-
-def _setup_paths_and_contexts(type, ctx, name):
-    path = _get_path(ctx) + [name] if ctx else [name]
-
-    return {'path': path}
 
 def _default_element_serializer(combinators, _, __):
     return _get_type_name(combinators)
@@ -217,3 +205,49 @@ def enum(values, name=None):
     return Enum
 
 enum.of = lambda l, name=None: enum({k: k for k in l}, name=name)
+
+def _typedef(args, kwargs, ctx=None):
+    def wrapper(fun):
+        def f(*inner_args, **inner_kwargs):
+            _assert(len(args) == len(inner_args), ctx=ctx, expected='{} arguments'.format(len(args)),
+                    found_type='{} arguments'.format(len(inner_args)))
+
+            for i in range(len(args)):
+                args[i](inner_args[i])
+
+            for k in kwargs:
+                kwargs[k](inner_kwargs.get(k))
+
+            typesafe_args = (args[i](inner_args[i]) for i in range(len(args)))
+            typesafe_kwargs = {k: kwargs[k](inner_kwargs[k]) for k in kwargs}
+            return fun(*typesafe_args, **typesafe_kwargs)
+
+        f.__pycomb__meta__ = {
+            'args': args,
+            'kwargs': kwargs
+        }
+
+        return f
+
+    return wrapper
+
+def function(*args, **kwargs):
+    name = 'Function({})'.format(', '.join(
+        __builtins__['list'](map(lambda k: '{}'.format(_get_type_name(k)), args)) +
+        __builtins__['list'](map(lambda k: '{}={}'.format(k, _get_type_name(kwargs[k])), kwargs))))
+
+    def Function(x, ctx=None):
+        new_ctx = _setup_paths_and_contexts(Function, ctx, name)
+
+        _assert(Function.is_type(x), ctx=new_ctx, expected=name, found_type=type(x))
+
+        return x if '__pycomb__meta__' in dir(x) else _typedef(args, kwargs, ctx=new_ctx)(x)
+
+    Function.is_type = lambda d: callable(d)
+    Function.meta = {
+        'name': name,
+        'args': args,
+        'kwargs': kwargs
+    }
+
+    return Function
