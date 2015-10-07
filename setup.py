@@ -24,7 +24,6 @@ def get_packages(path):
     return out
 
 packages = get_packages('pycomb')
-
 setup(name='pycomb',
       version='0.0.1',
       description='Python combination',
@@ -35,4 +34,4 @@ setup(name='pycomb',
       packages=packages,
       install_requires=readfile(os.path.join(os.path.dirname(__file__), "requirements.txt")),
       zip_safe=False,
-      test_suite="test")
+      test_suite="pycomb.test")
