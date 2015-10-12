@@ -1,15 +1,24 @@
 from pycomb import predicates as p
-from pycomb.base import _get_type_name, _get_path, _setup_paths_and_contexts, _new_ctx
+from pycomb.base import _get_type_name, _get_path, _setup_paths_and_contexts
 
 
 def _default_element_serializer(combinators, _, __):
     return _get_type_name(combinators)
 
+def _assert_msg(guard, msg, ctx=None):
+    path = _get_path(ctx)
+    if not guard:
+        if len(path) == 1:
+            raise ValueError('Error on {}: {}'.format(path[0], msg))
+        raise ValueError('Error on {}: {}'.format(''.join(path[:-1]) + ': ' + path[-1], msg))
+
 def _assert(guard, ctx=None, expected=None, found_type=None):
     path = _get_path(ctx)
     if not guard:
         found_type = found_type if type(found_type) is str else found_type.__name__
-        raise ValueError('Error on {}: expected {} but was {}'.format(''.join(path), expected, found_type))
+        if len(path) == 1:
+            raise ValueError('Error on {}: expected {} but was {}'.format(path[0], expected, found_type))
+        raise ValueError('Error on {}: expected {} but was {}'.format(''.join(path[:-1]) + ': ' + path[-1], expected, found_type))
 
 def irreducible(predicate, name='Irreducible'):
     def Irreducible(value, ctx=None):
@@ -33,16 +42,21 @@ String = irreducible(p.is_string, name='String')
 
 
 def list(combinator_element, name=None):
+    if name and type(name) != str:
+        raise ValueError('Invalid name supplied to {}: expected str for \'name\''
+                         .format('List({})'.format(_get_type_name(combinator_element))))
     if not name:
         name = 'List({})'.format(_get_type_name(combinator_element))
 
-    def List(x, ctx=None):
-
+    def List(*x, ctx=None):
         new_ctx_list = _setup_paths_and_contexts(List, ctx, '' if _get_path(ctx) else name)
-        _assert(List.is_type(x), ctx=new_ctx_list, found_type=type(x))
+
+        _assert_msg(x, 'missing 1 required positional argument: \'x\'', ctx=new_ctx_list)
+        _assert(lambda d: type(d) in (__builtins__['list'], tuple), ctx=new_ctx_list, found_type=type(x))
 
         result = []
         i = 0
+
         for d in x:
             new_ctx = _setup_paths_and_contexts(List, new_ctx_list, '[{}]'.format(i) if _get_path(new_ctx_list) else name)
             result.append(combinator_element(d, ctx=new_ctx))
@@ -50,7 +64,17 @@ def list(combinator_element, name=None):
 
         return tuple(result)
 
-    List.is_type = lambda d: type(d) in (__builtins__['list'], tuple)
+    def _is_type(d):
+        if not type(d) in (__builtins__['list'], tuple):
+            return False
+
+        for x in d:
+            if not combinator_element.is_type(x):
+                return False
+
+        return True
+
+    List.is_type = _is_type
     List.meta = {
         'name': name
     }
@@ -251,3 +275,5 @@ def function(*args, **kwargs):
     }
 
     return Function
+
+Number = union(Int, Float, name='Number')
