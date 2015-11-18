@@ -1,6 +1,7 @@
 from unittest import TestCase
 from unittest.mock import Mock
 from pycomb import combinators as c
+from pycomb.combinators import generic_object, Int
 from pycomb.predicates import StructType
 
 
@@ -15,8 +16,7 @@ class TestCombinators(TestCase):
         self.assertEqual(str, type(s))
 
     def test_list(self):
-        with(self.assertRaises(ValueError)):
-            c.list(c.String)('hello')
+        c.list(c.String)('hello')
 
         with(self.assertRaises(ValueError)):
             c.list(c.String)([1, 2, 3])
@@ -40,13 +40,12 @@ class TestCombinators(TestCase):
         self.assertEqual('b', l[1])
 
     def test_tuple(self):
-        with(self.assertRaises(ValueError)):
-            c.list(c.String)('hello')
+        c.list(c.String)('hello')
 
         with(self.assertRaises(ValueError)):
             c.list(c.String)((1, 2, 3))
 
-        l = c.list(c.String)(('a', 'b'))
+        l = c.list(c.String)(['a', 'b'])
         self.assertEqual(tuple, type(l))
         self.assertEqual(2, len(l))
         self.assertEqual('a', l[0])
@@ -234,3 +233,39 @@ class TestCombinators(TestCase):
         g2 = Fun(g)
 
         self.assertIs(g, g2)
+
+    def test_object(self):
+        class TestClass(object):
+            def __init__(self, f1, f2):
+                self.f1 = f1
+                self.f2 = f2
+
+        t = TestClass('hello', 10)
+
+        type1 = generic_object({'f1': Int, 'f2': Int}, TestClass)
+
+        e = None
+        try:
+            type1(t)
+        except ValueError as ex:
+          e = ex
+
+        self.assertEqual(
+            'Error on TestClass.f1: expected Int but was str',
+            e.args[0])
+
+        t = TestClass(20, 3.5)
+
+        e = None
+        try:
+            type1(t)
+        except ValueError as ex:
+            e = ex
+
+        self.assertEqual(
+            'Error on TestClass.f2: expected Int but was float',
+            e.args[0])
+
+        t = TestClass(20, 3)
+
+        type1(t)

@@ -1,6 +1,6 @@
 import unittest
 
-def throws_with_message(f, message):
+def throws_with_message(f, *messages):
     tc = unittest.TestCase('__init__')
 
     msg = None
@@ -9,4 +9,7 @@ def throws_with_message(f, message):
     except Exception as e:
         msg = e.args[0]
 
-    tc.assertEqual(message, msg)
+    tc.assertTrue(
+        msg in messages,
+        msg='Message: {}\nPossible messages: {}'.format(msg, messages)
+    )

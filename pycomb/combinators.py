@@ -18,7 +18,7 @@ def _assert(guard, ctx=None, expected=None, found_type=None):
         found_type = found_type if type(found_type) is str else found_type.__name__
         if len(path) == 1:
             raise ValueError('Error on {}: expected {} but was {}'.format(path[0], expected, found_type))
-        raise ValueError('Error on {}: expected {} but was {}'.format(''.join(path[:-1]) + ': ' + path[-1], expected, found_type))
+        raise ValueError('Error on {}: expected {} but was {}'.format(''.join(path[:-1]), expected, found_type))
 
 def irreducible(predicate, name='Irreducible'):
     def Irreducible(value, ctx=None):
@@ -48,7 +48,7 @@ def list(combinator_element, name=None):
     if not name:
         name = 'List({})'.format(_get_type_name(combinator_element))
 
-    def List(*x, ctx=None):
+    def List(x, ctx=None):
         new_ctx_list = _setup_paths_and_contexts(List, ctx, '' if _get_path(ctx) else name)
 
         _assert_msg(x, 'missing 1 required positional argument: \'x\'', ctx=new_ctx_list)
@@ -277,3 +277,31 @@ def function(*args, **kwargs):
     return Function
 
 Number = union(Int, Float, name='Number')
+
+def generic_object(fields_combinators: dict, object_type):
+    name = object_type.__name__
+
+    def Object(x, ctx=None):
+        new_ctx = _setup_paths_and_contexts(Object, ctx, name)
+
+        _assert(type(x) == object_type, ctx=new_ctx, expected=name, found_type=type(x))
+
+        for field in fields_combinators:
+            cur_field_combinator = fields_combinators[field]
+
+            selector = '.{}'.format(field) if _get_path(new_ctx) \
+                else '{}.{}'.format(name, field)
+
+            field_new_ctx = _setup_paths_and_contexts(Object, new_ctx, selector)
+            cur_field_combinator(getattr(x, field), ctx=field_new_ctx)
+
+        return x
+
+    Object.is_type = lambda d: type(d) == object_type and \
+                               all(fields_combinators[k].is_type(getattr(d, k)) for k in fields_combinators)
+
+    Object.meta = {
+        'name': name
+    }
+
+    return Object
