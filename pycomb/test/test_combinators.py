@@ -144,6 +144,21 @@ class TestCombinators(TestCase):
         e = e.exception
         self.assertEqual('Error on Union(Int, Float): expected Int or Float but was str', e.args[0])
 
+    def test_union_dispatcher(self):
+        Number = c.union(c.Int, c.Float, dispatcher=lambda _: c.Float)
+
+        self.assertEqual(1.0, Number(1.0))
+        with self.assertRaises(ValueError) as e:
+            self.assertEqual(2, Number(2))
+        self.assertEqual(
+            'Error on Union(Int, Float): expected Float but was int',
+            e.exception.args[0])
+
+        with self.assertRaises(ValueError) as e:
+            Number('hello')
+        e = e.exception
+        self.assertEqual('Error on Union(Int, Float): expected Int or Float but was str', e.args[0])
+
     def test_intersection(self):
         name_type = c.struct({'name': c.String})
         age_type = c.struct({'age': c.Int})
