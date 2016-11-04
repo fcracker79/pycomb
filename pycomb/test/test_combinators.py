@@ -64,8 +64,8 @@ class TestCombinators(TestCase):
 
         self.assertTrue(
             e.args[0] in
-                ('Error on Struct{name: String, value: Int}[name]: expected String but was int',
-                'Error on Struct{value: Int, name: String}[name]: expected String but was int'))
+            ('Error on Struct{name: String, value: Int}[name]: expected String but was int',
+             'Error on Struct{value: Int, name: String}[name]: expected String but was int'))
 
         result = c.struct(d)({'name': 'myName', 'value': 1})
         self.assertEqual('myName', result.name)
@@ -153,7 +153,8 @@ class TestCombinators(TestCase):
             e = ex
 
         self.assertEqual(
-            'Error on Intersection(Struct{name: String}, Struct{age: Int}): expected Struct{name: String} or Struct{age: Int} but was dict',
+            'Error on Intersection(Struct{name: String}, Struct{age: Int}): '
+            'expected Struct{name: String} or Struct{age: Int} but was dict',
             e.args[0])
 
     def test_enums(self):
@@ -175,6 +176,7 @@ class TestCombinators(TestCase):
         self.assertEqual('Error on Enum(V1: 1, V2: 2, V3: 3): expected V1 or V2 or V3 but was V4', e.args[0])
 
     def test_enums_list(self):
+        # noinspection PyUnresolvedReferences
         Enum = c.enum.of(['a', 'b', 'c'])
 
         self.assertEqual('a', Enum('a'))
@@ -194,6 +196,7 @@ class TestCombinators(TestCase):
         self.assertEqual('Error on Enum(a: a, b: b, c: c): expected a or b or c but was V4', e.args[0])
 
     def test_function(self):
+        # noinspection PyUnresolvedReferences
         Fun = c.function(c.String, c.Int, a=c.Float, b=c.enum.of(['X', 'Y', 'Z']))
 
         f = Mock()
@@ -209,8 +212,10 @@ class TestCombinators(TestCase):
 
         self.assertTrue(
             e.args[0] in (
-                'Error on Function(String, Int, a=Float, b=Enum(X: X, Y: Y, Z: Z)): expected 2 arguments but was 0 arguments',
-                'Error on Function(String, Int, b=Enum(X: X, Y: Y, Z: Z), a=Float): expected 2 arguments but was 0 arguments'
+                'Error on Function(String, Int, a=Float, b=Enum(X: X, Y: Y, Z: Z)): '
+                'expected 2 arguments but was 0 arguments',
+                'Error on Function(String, Int, b=Enum(X: X, Y: Y, Z: Z), a=Float): '
+                'expected 2 arguments but was 0 arguments'
             )
         )
 
@@ -221,11 +226,16 @@ class TestCombinators(TestCase):
             e = ex
 
         self.assertTrue(e.args[0] in (
-            'Error on Function(String, Int, b=Enum(X: X, Y: Y, Z: Z), a=Float): expected Function(String, Int, b=Enum(X: X, Y: Y, Z: Z), a=Float) but was str',
-            'Error on Function(String, Int, a=Float, b=Enum(X: X, Y: Y, Z: Z)): expected Function(String, Int, a=Float, b=Enum(X: X, Y: Y, Z: Z)) but was str'
+            'Error on Function(String, Int, b=Enum(X: X, Y: Y, Z: Z), a=Float): '
+            'expected Function(String, Int, b=Enum(X: X, Y: Y, Z: Z), a=Float) but was str',
+            'Error on Function(String, Int, a=Float, b=Enum(X: X, Y: Y, Z: Z)): '
+            'expected Function(String, Int, a=Float, b=Enum(X: X, Y: Y, Z: Z)) but was str'
         ))
 
-        f = lambda x1, x2, a=None, b=None: None
+        # noinspection PyUnusedLocal
+        def f(x1, x2, a=None, b=None):
+            pass
+
         g = Fun(f)
 
         self.assertIsNot(f, g)
@@ -248,7 +258,7 @@ class TestCombinators(TestCase):
         try:
             type1(t)
         except ValueError as ex:
-          e = ex
+            e = ex
 
         self.assertEqual(
             'Error on TestClass.f1: expected Int but was str',

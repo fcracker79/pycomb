@@ -2,6 +2,7 @@ from pycomb import combinators as t
 from pycomb.test import util
 from unittest.case import TestCase
 
+
 class TestList(TestCase):
 
     def setUp(self):
@@ -15,10 +16,11 @@ class TestList(TestCase):
         self.ListOfNumbers = t.list(t.Number, 'ListOfNumbers')
         self.Path = t.list(self.Point, 'Path')
 
-        self.PathOfPoint = t.list(self.Point);
+        self.PathOfPoint = t.list(self.Point)
         self.p1 = self.Point({'x': 0, 'y': 0})
         self.p2 = self.Point({'x': 1, 'y': 1})
 
+    # noinspection PyArgumentList
     def test_list_type_combinator_then(self):
         util.throws_with_message(
           lambda: t.list(),
@@ -54,9 +56,8 @@ class TestList(TestCase):
     #    }));
         self.fail(msg='TODO: Implement production mode!')
 
-
     def test_should_be_idempotent(self):
-        numbers0 = [1, 2];
+        numbers0 = [1, 2]
         numbers1 = self.ListOfNumbers(numbers0)
         numbers2 = self.ListOfNumbers(numbers1)
         self.assertEqual((1, 2), numbers1)
@@ -97,7 +98,6 @@ class TestList(TestCase):
     #    }));
     #  });
 
-
     def test_list_type_should_return_true_when_x_is_list_of_type(self):
         self.assertTrue(self.PathOfPoint.is_type([]))
         self.assertTrue(self.PathOfPoint.is_type([self.p1, self.p2]))
@@ -107,8 +107,8 @@ class TestList(TestCase):
         self.assertTrue(self.PathOfPoint.is_type([self.p1, self.p2]))
 
     def test_should_return_new_instance(self):
-          ListOfStrings = t.list(t.String)
-          instance = ['a', 'b']
-          newInstance = ListOfStrings.update(instance, {'$push': ['c']})
-          self.assertFalse(newInstance == instance)
-          self.assertEqual(newInstance, ['a', 'b', 'c'])
+        ListOfStrings = t.list(t.String)
+        instance = ['a', 'b']
+        new_instance = ListOfStrings.update(instance, {'$push': ['c']})
+        self.assertFalse(new_instance == instance)
+        self.assertEqual(new_instance, ['a', 'b', 'c'])

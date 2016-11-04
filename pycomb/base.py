@@ -1,13 +1,16 @@
-def _get_type_name(type):
-    return type.meta['name']
+def get_type_name(type_obj):
+    return type_obj.meta['name']
 
-def _get_path(ctx):
+
+def get_path(ctx):
     return ctx['path'] if ctx else []
 
-def _new_ctx():
+
+def new_ctx():
     return {'path': []}
 
-def _setup_paths_and_contexts(type, ctx, name):
-    path = _get_path(ctx) + [name] if ctx else [name]
+
+def setup_paths_and_contexts(type_obj, ctx, name):
+    path = get_path(ctx) + [name] if ctx else [name]
 
     return {'path': path}
