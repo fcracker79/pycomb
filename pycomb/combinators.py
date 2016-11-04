@@ -71,10 +71,7 @@ def list(combinator_element, name=None):
 
         for d in x:
             new_ctx = context.create(new_ctx_list)
-            if new_ctx.empty:
-                new_ctx.append(name)
-            else:
-                new_ctx.append('[{}]'.format(i), separator='')
+            new_ctx.append('[{}]'.format(i), separator='')
 
             result.append(combinator_element(d, ctx=new_ctx))
             i += 1
