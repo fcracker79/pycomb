@@ -1,15 +1,16 @@
+import contextlib
 import unittest
 
-def throws_with_message(f, *messages):
+
+@contextlib.contextmanager
+def throws_with_message(*messages):
     tc = unittest.TestCase('__init__')
 
-    msg = None
-    try:
-        f()
-    except Exception as e:
-        msg = e.args[0]
-
+    with tc.assertRaises(Exception) as e:
+        yield
+    msg = e.exception.args[0]
     tc.assertTrue(
         msg in messages,
         msg='Message: {}\nPossible messages: {}'.format(msg, messages)
     )
+    return e.exception

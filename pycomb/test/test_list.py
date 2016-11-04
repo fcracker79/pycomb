@@ -22,28 +22,23 @@ class TestList(TestCase):
 
     # noinspection PyArgumentList
     def test_list_type_combinator_then(self):
-        util.throws_with_message(
-          lambda: t.list(),
-          'list() missing 1 required positional argument: \'combinator_element\'')
+        with util.throws_with_message('list() missing 1 required positional argument: \'combinator_element\''):
+            t.list()
 
-        util.throws_with_message(
-          lambda: t.list(self.Point)([1]),
+        with util.throws_with_message(
           'Error on List(Struct{x: Number, y: Number})[0]: expected Struct{x: Number, y: Number} but was int',
-          'Error on List(Struct{y: Number, x: Number})[0]: expected Struct{y: Number, x: Number} but was int')
+          'Error on List(Struct{y: Number, x: Number})[0]: expected Struct{y: Number, x: Number} but was int'):
+            t.list(self.Point)([1])
 
     def test_should_throw_with_contextual_error_message_wrong_args(self):
-        util.throws_with_message(
-            lambda: self.ListOfNumbers([]),
-            'Error on ListOfNumbers: missing 1 required positional argument: \'x\'')
+        with util.throws_with_message('Error on ListOfNumbers: missing 1 required positional argument: \'x\''):
+            self.ListOfNumbers([])
 
-        util.throws_with_message(
-            lambda: self.ListOfNumbers('a'),
-            'Error on ListOfNumbers[0]: expected Int or Float but was str'
-        )
+        with util.throws_with_message('Error on ListOfNumbers[0]: expected Int or Float but was str'):
+            self.ListOfNumbers('a')
 
-        util.throws_with_message(
-            lambda: self.ListOfNumbers([1, ['root']]),
-            'Error on ListOfNumbers[1]: expected Int or Float but was list')
+        with util.throws_with_message('Error on ListOfNumbers[1]: expected Int or Float but was list'):
+            self.ListOfNumbers([1, ['root']])
 
     def test_hydrate_elements(self):
         instance = self.MyList([{}])

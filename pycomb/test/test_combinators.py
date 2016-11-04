@@ -3,7 +3,7 @@ from unittest.mock import Mock
 from pycomb import combinators as c
 from pycomb.combinators import generic_object, Int
 from pycomb.predicates import StructType
-
+from pycomb.test import util
 
 class TestCombinators(TestCase):
     def test(self):
@@ -91,13 +91,13 @@ class TestCombinators(TestCase):
         self.assertEqual('Mirko', r.name)
         self.assertEqual(36, r.data.age)
 
+        util
         exception = None
         try:
             c.struct({'name': c.String, 'data': c.struct({'age': c.Int})})({'name': 'Mirko', 'data': {'age': '36'}})
         except ValueError as e:
             exception = e
 
-        print(exception.args[0])
         self.assertTrue(
             exception.args[0] in (
                 'Error on Struct{data: Struct{age: Int}, name: String}[data][age]: expected Int but was str',
