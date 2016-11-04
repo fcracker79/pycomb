@@ -7,10 +7,6 @@ def get_type_name(type_obj):
     return type_obj.meta['name']
 
 
-def _default_element_serializer(combinators, *_):
-    return get_type_name(combinators)
-
-
 def _assert_msg(guard, msg, ctx):
     if not guard:
         raise ValueError(_generate_error_message(ctx, msg=msg))

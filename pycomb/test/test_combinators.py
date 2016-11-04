@@ -17,7 +17,6 @@ class TestCombinators(TestCase):
 
     def test_list(self):
         c.list(c.String)('hello')
-        self.assertTrue(c.list(c.String).is_type('hello'))
         with(self.assertRaises(ValueError)):
             c.list(c.String)([1, 2, 3])
         self.assertFalse(c.list(c.String).is_type([1, 2, 3]))
@@ -27,12 +26,12 @@ class TestCombinators(TestCase):
         e = e.exception
         expected = 'Error on List(String)[1]: expected String but was int'
         self.assertEquals(expected, e.args[0])
-
         l = c.list(c.String)(['a', 'b'])
         self.assertEqual(tuple, type(l))
         self.assertEqual(2, len(l))
         self.assertEqual('a', l[0])
         self.assertEqual('b', l[1])
+        self.assertTrue(c.list(c.String).is_type(['a', 'b']))
 
     def test_tuple(self):
         c.list(c.String)('hello')
@@ -152,6 +151,22 @@ class TestCombinators(TestCase):
 
         d = my_type({'name': 'mirko', 'age': 36})
         self.assertEqual('mirko', d.name)
+
+        with self.assertRaises(ValueError) as e:
+            my_type({'name': 'mirko', 'age': '36'})
+        e = e.exception
+        self.assertEqual(
+            'Error on Intersection(Struct{name: String}, Struct{age: Int}): '
+            'expected Struct{name: String} or Struct{age: Int} but was dict',
+            e.args[0])
+
+    def test_intersection_dispatcher(self):
+        name_type = c.struct({'name': c.String})
+        age_type = c.struct({'age': c.Int})
+        my_type = c.intersection(name_type, age_type, dispatcher=lambda x: age_type)
+
+        d = my_type({'name': 'mirko', 'age': 36})
+        self.assertEqual(36, d.age)
 
         with self.assertRaises(ValueError) as e:
             my_type({'name': 'mirko', 'age': '36'})
