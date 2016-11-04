@@ -17,9 +17,10 @@ class TestCombinators(TestCase):
 
     def test_list(self):
         c.list(c.String)('hello')
-
+        self.assertTrue(c.list(c.String).is_type('hello'))
         with(self.assertRaises(ValueError)):
             c.list(c.String)([1, 2, 3])
+        self.assertFalse(c.list(c.String).is_type([1, 2, 3]))
 
         with self.assertRaises(ValueError) as e:
             c.list(c.String)(['1', 2, '3'])

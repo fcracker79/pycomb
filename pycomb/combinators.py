@@ -53,9 +53,6 @@ String = irreducible(p.is_string, name='String')
 
 # noinspection PyShadowingBuiltins
 def list(combinator_element, name=None):
-    if name and type(name) != str:
-        raise ValueError('Invalid name supplied to {}: expected str for \'name\''
-                         .format('List({})'.format(get_type_name(combinator_element))))
     if not name:
         name = 'List({})'.format(get_type_name(combinator_element))
 
@@ -113,10 +110,7 @@ def struct(combinators, name=None):
         new_dict = {}
         for k in combinators:
             new_ctx = context.create(ctx)
-            if new_ctx.empty:
-                new_ctx.append('{}[{}]'.format(name, k))
-            else:
-                new_ctx.append('[{}]'.format(k), separator='')
+            new_ctx.append('[{}]'.format(k), separator='')
             new_dict[k] = combinators[k](x[k], ctx=new_ctx)
         return p.StructType(new_dict)
 
@@ -139,7 +133,9 @@ def maybe(combinator, name=None):
     def _maybe(x, ctx=None):
         new_ctx = context.create(ctx)
         new_ctx.append(name)
-        _assert(_maybe.is_type(x), ctx=new_ctx, found_type=type(x), expected='None or {}'.format(get_type_name(combinator)))
+        _assert(
+            _maybe.is_type(x), ctx=new_ctx,
+            found_type=type(x), expected='None or {}'.format(get_type_name(combinator)))
 
         return combinator(x, new_ctx) if x else None
 
