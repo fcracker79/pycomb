@@ -175,6 +175,14 @@ class TestCombinators(TestCase):
             'expected Struct{name: String} or Struct{age: Int} but was dict',
             e.args[0])
 
+        with self.assertRaises(ValueError) as e:
+            my_type('Hello')
+        e = e.exception
+        self.assertEqual(
+            'Error on Intersection(Struct{name: String}, Struct{age: Int}): '
+            'expected Struct{name: String} or Struct{age: Int} but was str',
+            e.args[0])
+
     def test_intersection_dispatcher(self):
         name_type = c.struct({'name': c.String})
         age_type = c.struct({'age': c.Int})
