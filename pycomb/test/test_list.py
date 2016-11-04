@@ -28,8 +28,8 @@ class TestList(TestCase):
 
         util.throws_with_message(
           lambda: t.list(self.Point)([1]),
-          'Error on List(Struct{x: Number, y: Number}): expected Struct{x: Number, y: Number} but was int',
-          'Error on List(Struct{y: Number, x: Number}): expected Struct{y: Number, x: Number} but was int')
+          'Error on List(Struct{x: Number, y: Number})[0]: expected Struct{x: Number, y: Number} but was int',
+          'Error on List(Struct{y: Number, x: Number})[0]: expected Struct{y: Number, x: Number} but was int')
 
     def test_should_throw_with_contextual_error_message_wrong_args(self):
         util.throws_with_message(

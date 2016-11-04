@@ -65,7 +65,8 @@ class TestCombinators(TestCase):
         self.assertTrue(
             e.args[0] in
             ('Error on Struct{name: String, value: Int}[name]: expected String but was int',
-             'Error on Struct{value: Int, name: String}[name]: expected String but was int'))
+             'Error on Struct{value: Int, name: String}[name]: expected String but was int'),
+            msg=e.args[0])
 
         result = c.struct(d)({'name': 'myName', 'value': 1})
         self.assertEqual('myName', result.name)
@@ -101,7 +102,8 @@ class TestCombinators(TestCase):
             exception.args[0] in (
                 'Error on Struct{data: Struct{age: Int}, name: String}[data][age]: expected Int but was str',
                 'Error on Struct{name: String, data: Struct{age: Int}}[data][age]: expected Int but was str',
-            ))
+            ),
+            msg=exception.args[0])
 
     def test_maybe(self):
         with(self.assertRaises(ValueError)):

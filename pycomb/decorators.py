@@ -1,4 +1,4 @@
-from pycomb.base import new_ctx
+from pycomb import context
 
 
 def returning(combinator):
@@ -6,7 +6,7 @@ def returning(combinator):
         def f(*inner_args, **inner_kwargs):
             result = fun(*inner_args, **inner_kwargs)
 
-            return combinator(result, ctx=new_ctx())
+            return combinator(result, ctx=context.create())
         return f
 
     return wrapper

@@ -1,33 +1,38 @@
-from pycomb import predicates as p
-from pycomb.base import get_type_name, get_path, setup_paths_and_contexts
+from pycomb import predicates as p, context
 
 _orig_list = list
+
+
+def get_type_name(type_obj):
+    return type_obj.meta['name']
 
 
 def _default_element_serializer(combinators, *_):
     return get_type_name(combinators)
 
 
-def _assert_msg(guard, msg, ctx=None):
-    path = get_path(ctx)
+def _assert_msg(guard, msg, ctx):
     if not guard:
-        if len(path) == 1:
-            raise ValueError('Error on {}: {}'.format(path[0], msg))
-        raise ValueError('Error on {}: {}'.format(''.join(path[:-1]) + ': ' + path[-1], msg))
+        raise ValueError(_generate_error_message(ctx, msg=msg))
 
 
-def _assert(guard, ctx=None, expected=None, found_type=None):
-    path = get_path(ctx)
+def _assert(guard, ctx, expected=None, found_type=None):
     if not guard:
         found_type = found_type if type(found_type) is str else found_type.__name__
-        if len(path) == 1:
-            raise ValueError('Error on {}: expected {} but was {}'.format(path[0], expected, found_type))
-        raise ValueError('Error on {}: expected {} but was {}'.format(''.join(path[:-1]), expected, found_type))
+        raise ValueError(_generate_error_message(ctx, expected, found_type))
+
+
+def _generate_error_message(ctx, expected=None, found_type=None, msg=None):
+    return 'Error on {}: {}'.format(ctx.path, msg) if msg \
+        else 'Error on {}: expected {} but was {}'.format(
+            ctx.path, expected, found_type)
 
 
 def irreducible(predicate, name='Irreducible'):
     def _irreducible(value, ctx=None):
-        new_ctx = setup_paths_and_contexts(_irreducible, ctx, '' if get_path(ctx) else name)
+        new_ctx = context.create(ctx)
+        if new_ctx.empty:
+            new_ctx.append(name)
 
         _assert(_irreducible.is_type(value), ctx=new_ctx, expected=name, found_type=type(value))
 
@@ -55,17 +60,22 @@ def list(combinator_element, name=None):
         name = 'List({})'.format(get_type_name(combinator_element))
 
     def _list(x, ctx=None):
-        new_ctx_list = setup_paths_and_contexts(_list, ctx, '' if get_path(ctx) else name)
+        new_ctx_list = context.create(ctx)
+        if new_ctx_list.empty:
+            new_ctx_list.append(name)
 
         _assert_msg(x, 'missing 1 required positional argument: \'x\'', ctx=new_ctx_list)
-        _assert(lambda _d: type(_d) in (_orig_list, tuple), ctx=new_ctx_list, found_type=type(x))
 
         result = []
         i = 0
 
         for d in x:
-            new_ctx = setup_paths_and_contexts(
-                _list, new_ctx_list, '[{}]'.format(i) if get_path(new_ctx_list) else name)
+            new_ctx = context.create(new_ctx_list)
+            if new_ctx.empty:
+                new_ctx.append(name)
+            else:
+                new_ctx.append('[{}]'.format(i), separator='')
+
             result.append(combinator_element(d, ctx=new_ctx))
             i += 1
 
@@ -94,6 +104,10 @@ def struct(combinators, name=None):
             ', '.join(map(lambda k: '{}: {}'.format(k, get_type_name(combinators[k])), combinators))))
 
     def _struct(x, ctx=None):
+        ctx = context.create(ctx)
+        if ctx.empty:
+            ctx.append(name)
+
         _assert(_struct.is_type(x) or type(x) is dict, ctx=ctx, expected=name, found_type=type(x))
 
         if type(x) == p.StructType:
@@ -101,8 +115,11 @@ def struct(combinators, name=None):
 
         new_dict = {}
         for k in combinators:
-            selector = '[{}]'.format(k) if get_path(ctx) else '{}[{}]'.format(name, k)
-            new_ctx = setup_paths_and_contexts(_struct, ctx, selector)
+            new_ctx = context.create(ctx)
+            if new_ctx.empty:
+                new_ctx.append('{}[{}]'.format(name, k))
+            else:
+                new_ctx.append('[{}]'.format(k), separator='')
             new_dict[k] = combinators[k](x[k], ctx=new_ctx)
         return p.StructType(new_dict)
 
@@ -123,7 +140,8 @@ def maybe(combinator, name=None):
         name = 'Maybe ({})'.format(get_type_name(combinator))
 
     def _maybe(x, ctx=None):
-        new_ctx = setup_paths_and_contexts(_maybe, ctx, name)
+        new_ctx = context.create(ctx)
+        new_ctx.append(name)
         _assert(_maybe.is_type(x), ctx=new_ctx, found_type=type(x))
 
         return combinator(x, new_ctx) if x else None
@@ -149,7 +167,9 @@ def union(*combinators, name=None, dispatcher=None):
         name = 'Union({})'.format(', '.join(map(lambda d: get_type_name(d), combinators)))
 
     def _union(x, ctx=None):
-        new_ctx = setup_paths_and_contexts(_union, ctx, name)
+        new_ctx = context.create(ctx)
+        if new_ctx.empty:
+            new_ctx.append(name)
         _assert(_union.is_type(x), ctx=new_ctx,
                 expected=' or '.join(map(lambda d: get_type_name(d), combinators)), found_type=type(x))
 
@@ -176,7 +196,8 @@ def intersection(*combinators, name=None, dispatcher=None):
             ', '.join(map(lambda d: get_type_name(d), combinators)))
 
     def _intersection(x, ctx=None):
-        new_ctx = setup_paths_and_contexts(_intersection, ctx, name)
+        new_ctx = context.create(ctx)
+        new_ctx.append(name)
         _assert(_intersection.is_type(x), ctx=new_ctx,
                 expected=' or '.join(map(lambda d: get_type_name(d), combinators)),
                 found_type=type(x))
@@ -187,7 +208,7 @@ def intersection(*combinators, name=None, dispatcher=None):
         else:
             default_combinator = _default_composite_dispatcher(x, combinators)
 
-        return default_combinator(x, ctx=ctx)
+        return default_combinator(x, ctx=new_ctx)
 
     _intersection.meta = {
         'name': name
@@ -202,7 +223,8 @@ def subtype(combinator, condition, name=None):
         name = 'Subtype({})'.format(get_type_name(combinator))
 
     def _subtype(x, ctx=None):
-        new_ctx = setup_paths_and_contexts(_subtype, ctx, name)
+        new_ctx = context.create(ctx)
+        new_ctx.append(name)
         _assert(_subtype.is_type(x), ctx=new_ctx, expected=name, found_type=type(x))
 
         return combinator(x, new_ctx)
@@ -224,7 +246,8 @@ def enum(values, name=None):
         name = 'Enum({})'.format(', '.join(map(lambda k: '{}: {}'.format(k, values[k]), sorted_enums)))
 
     def _enum(x, ctx=None):
-        new_ctx = setup_paths_and_contexts(_enum, ctx, name)
+        new_ctx = context.create(ctx)
+        new_ctx.append(name)
 
         _assert(_enum.is_type(x), ctx=new_ctx,
                 expected=' or '.join(sorted_enums),
@@ -280,7 +303,8 @@ def function(*args, **kwargs):
         _orig_list(map(lambda k: '{}={}'.format(k, get_type_name(kwargs[k])), kwargs))))
 
     def _function(x, ctx=None):
-        new_ctx = setup_paths_and_contexts(_function, ctx, name)
+        new_ctx = context.create(ctx)
+        new_ctx.append(name)
 
         _assert(_function.is_type(x), ctx=new_ctx, expected=name, found_type=type(x))
 
@@ -302,17 +326,20 @@ def generic_object(fields_combinators: dict, object_type):
     name = object_type.__name__
 
     def _object(x, ctx=None):
-        new_ctx = setup_paths_and_contexts(_object, ctx, name)
+        new_ctx = context.create(ctx)
+        new_ctx.append(name)
 
         _assert(type(x) == object_type, ctx=new_ctx, expected=name, found_type=type(x))
 
         for field in fields_combinators:
             cur_field_combinator = fields_combinators[field]
 
-            selector = '.{}'.format(field) if get_path(new_ctx) \
-                else '{}.{}'.format(name, field)
-
-            field_new_ctx = setup_paths_and_contexts(_object, new_ctx, selector)
+            field_new_ctx = context.create(new_ctx)
+            if field_new_ctx.empty:
+                ctx_data_to_append = '{}.{}'.format(name, field)
+            else:
+                ctx_data_to_append = '{}'.format(field)
+            field_new_ctx.append(ctx_data_to_append)
             cur_field_combinator(getattr(x, field), ctx=field_new_ctx)
 
         return x
