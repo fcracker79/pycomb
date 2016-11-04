@@ -4,21 +4,16 @@ import abc
 class ValidationContext(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def append(self, path_element):
-        pass
+        pass  # pragma: no cover
 
     @abc.abstractmethod
     def path(self):
-        pass
-
-    @property
-    @abc.abstractmethod
-    def path_elements(self):
-        pass
+        pass  # pragma: no cover
 
     @property
     @abc.abstractmethod
     def empty(self):
-        pass
+        pass  # pragma: no cover
 
 
 class ValidationContextImpl(ValidationContext):
@@ -37,10 +32,6 @@ class ValidationContextImpl(ValidationContext):
         if self._path_str is None:
             self._path_str = ''.join(self._path)
         return self._path_str
-
-    @property
-    def path_elements(self):
-        return tuple(self._path)
 
     @property
     def empty(self):

@@ -3,7 +3,7 @@ from unittest.mock import Mock
 from pycomb import combinators as c
 from pycomb.combinators import generic_object, Int
 from pycomb.predicates import StructType
-from pycomb.test import util
+
 
 class TestCombinators(TestCase):
     def test(self):
@@ -21,15 +21,9 @@ class TestCombinators(TestCase):
         with(self.assertRaises(ValueError)):
             c.list(c.String)([1, 2, 3])
 
-        e = None
-
-        try:
+        with self.assertRaises(ValueError) as e:
             c.list(c.String)(['1', 2, '3'])
-        except Exception as ex:
-            e = ex
-
-        self.assertIsInstance(e, ValueError)
-
+        e = e.exception
         expected = 'Error on List(String)[1]: expected String but was int'
         self.assertEquals(expected, e.args[0])
 
@@ -56,12 +50,10 @@ class TestCombinators(TestCase):
         with(self.assertRaises(ValueError)):
             c.struct(d)('hello')
 
-        e = None
-        try:
+        with self.assertRaises(ValueError) as e:
             c.struct(d)({'name': 0, 'value': 1})
-        except ValueError as ex:
-            e = ex
 
+        e = e.exception
         self.assertTrue(
             e.args[0] in
             ('Error on Struct{name: String, value: Int}[name]: expected String but was int',
@@ -91,13 +83,9 @@ class TestCombinators(TestCase):
         self.assertEqual('Mirko', r.name)
         self.assertEqual(36, r.data.age)
 
-        util
-        exception = None
-        try:
+        with self.assertRaises(ValueError) as exception:
             c.struct({'name': c.String, 'data': c.struct({'age': c.Int})})({'name': 'Mirko', 'data': {'age': '36'}})
-        except ValueError as e:
-            exception = e
-
+        exception = exception.exception
         self.assertTrue(
             exception.args[0] in (
                 'Error on Struct{data: Struct{age: Int}, name: String}[data][age]: expected Int but was str',
@@ -108,22 +96,41 @@ class TestCombinators(TestCase):
     def test_maybe(self):
         with(self.assertRaises(ValueError)):
             c.String(None)
-
         self.assertIsNone(c.maybe(c.String)(None))
+        my_maybe = c.maybe(c.String)
+        self.assertEqual('hello', my_maybe('hello'))
+        with self.assertRaises(ValueError) as e:
+            my_maybe(1)
+        self.assertEquals(
+            'Error on Maybe (String): expected None or String but was int',
+            e.exception.args[0])
 
-        self.assertEqual('hello', c.maybe(c.String)('hello'))
+    def test_named_maybe(self):
+        my_maybe = c.maybe(c.String, name='MyMaybe')
+        self.assertIsNone(my_maybe(None))
+        self.assertEqual('hello', my_maybe('hello'))
+        with self.assertRaises(ValueError) as e:
+            my_maybe(1)
+        self.assertEquals(
+            'Error on MyMaybe: expected None or String but was int',
+            e.exception.args[0])
 
     def test_subtype(self):
         SmallString = c.subtype(c.String, lambda d: len(d) <= 10)
 
-        e = None
-        try:
+        with self.assertRaises(ValueError) as e:
             SmallString('12345678901')
-        except ValueError as ex:
-            e = ex
-
+        e = e.exception
         self.assertEqual('Error on Subtype(String): expected Subtype(String) but was str', e.args[0])
+        self.assertEqual('12345', SmallString('12345'))
 
+    def test_named_subtype(self):
+        SmallString = c.subtype(c.String, lambda d: len(d) <= 10, name='SmallString')
+
+        with self.assertRaises(ValueError) as e:
+            SmallString('12345678901')
+        e = e.exception
+        self.assertEqual('Error on SmallString: expected SmallString but was str', e.args[0])
         self.assertEqual('12345', SmallString('12345'))
 
     def test_union(self):
@@ -132,12 +139,9 @@ class TestCombinators(TestCase):
         self.assertEqual(1.0, Number(1.0))
         self.assertEqual(2, Number(2))
 
-        e = None
-        try:
+        with self.assertRaises(ValueError) as e:
             Number('hello')
-        except ValueError as ex:
-            e = ex
-
+        e = e.exception
         self.assertEqual('Error on Union(Int, Float): expected Int or Float but was str', e.args[0])
 
     def test_intersection(self):
@@ -148,14 +152,27 @@ class TestCombinators(TestCase):
         d = my_type({'name': 'mirko', 'age': 36})
         self.assertEqual('mirko', d.name)
 
-        e = None
-        try:
+        with self.assertRaises(ValueError) as e:
             my_type({'name': 'mirko', 'age': '36'})
-        except ValueError as ex:
-            e = ex
-
+        e = e.exception
         self.assertEqual(
             'Error on Intersection(Struct{name: String}, Struct{age: Int}): '
+            'expected Struct{name: String} or Struct{age: Int} but was dict',
+            e.args[0])
+
+    def test_named_intersection(self):
+        name_type = c.struct({'name': c.String})
+        age_type = c.struct({'age': c.Int})
+        my_type = c.intersection(name_type, age_type, name='MyType')
+
+        d = my_type({'name': 'mirko', 'age': 36})
+        self.assertEqual('mirko', d.name)
+
+        with self.assertRaises(ValueError) as e:
+            my_type({'name': 'mirko', 'age': '36'})
+        e = e.exception
+        self.assertEqual(
+            'Error on MyType: '
             'expected Struct{name: String} or Struct{age: Int} but was dict',
             e.args[0])
 
@@ -169,13 +186,25 @@ class TestCombinators(TestCase):
         e = Enum('V1')
         self.assertEqual('1', e)
 
-        e = None
-        try:
+        with self.assertRaises(ValueError) as e:
             Enum('V4')
-        except ValueError as ex:
-            e = ex
-
+        e = e.exception
         self.assertEqual('Error on Enum(V1: 1, V2: 2, V3: 3): expected V1 or V2 or V3 but was V4', e.args[0])
+
+    def test_named_enums(self):
+        Enum = c.enum({'V1': '1', 'V2': '2', 'V3': '3'}, name='MyEnum')
+
+        self.assertEqual('1', Enum.V1)
+        self.assertEqual('2', Enum.V2)
+        self.assertEqual('3', Enum.V3)
+
+        e = Enum('V1')
+        self.assertEqual('1', e)
+
+        with self.assertRaises(ValueError) as e:
+            Enum('V4')
+        e = e.exception
+        self.assertEqual('Error on MyEnum: expected V1 or V2 or V3 but was V4', e.args[0])
 
     def test_enums_list(self):
         # noinspection PyUnresolvedReferences
@@ -189,12 +218,9 @@ class TestCombinators(TestCase):
         self.assertEqual('b', Enum.b)
         self.assertEqual('c', Enum.c)
 
-        e = None
-        try:
+        with self.assertRaises(ValueError) as e:
             Enum('V4')
-        except ValueError as ex:
-            e = ex
-
+        e = e.exception
         self.assertEqual('Error on Enum(a: a, b: b, c: c): expected a or b or c but was V4', e.args[0])
 
     def test_function(self):
@@ -206,12 +232,9 @@ class TestCombinators(TestCase):
         new_f = Fun(f)
         self.assertTrue(callable(new_f))
 
-        e = None
-        try:
+        with self.assertRaises(ValueError) as e:
             new_f()
-        except ValueError as ex:
-            e = ex
-
+        e = e.exception
         self.assertTrue(
             e.args[0] in (
                 'Error on Function(String, Int, a=Float, b=Enum(X: X, Y: Y, Z: Z)): '
@@ -221,12 +244,9 @@ class TestCombinators(TestCase):
             )
         )
 
-        e = None
-        try:
+        with self.assertRaises(ValueError) as e:
             Fun('Hello')
-        except ValueError as ex:
-            e = ex
-
+        e = e.exception
         self.assertTrue(e.args[0] in (
             'Error on Function(String, Int, b=Enum(X: X, Y: Y, Z: Z), a=Float): '
             'expected Function(String, Int, b=Enum(X: X, Y: Y, Z: Z), a=Float) but was str',
@@ -256,28 +276,30 @@ class TestCombinators(TestCase):
 
         type1 = generic_object({'f1': Int, 'f2': Int}, TestClass)
 
-        e = None
-        try:
+        with self.assertRaises(ValueError) as e:
             type1(t)
-        except ValueError as ex:
-            e = ex
-
+        e = e.exception
         self.assertEqual(
             'Error on TestClass.f1: expected Int but was str',
             e.args[0])
-
+        self.assertFalse(type1.is_type(t))
         t = TestClass(20, 3.5)
 
-        e = None
-        try:
+        with self.assertRaises(ValueError) as e:
             type1(t)
-        except ValueError as ex:
-            e = ex
-
+        e = e.exception
         self.assertEqual(
             'Error on TestClass.f2: expected Int but was float',
             e.args[0])
-
+        self.assertFalse(type1.is_type(t))
+        with self.assertRaises(ValueError) as e:
+            type1('hello')
+        e = e.exception
+        self.assertEqual(
+            'Error on TestClass: expected TestClass but was str',
+            e.args[0])
+        self.assertFalse(type1.is_type(t))
         t = TestClass(20, 3)
 
         type1(t)
+        self.assertTrue(type1.is_type(t))

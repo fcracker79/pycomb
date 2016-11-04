@@ -139,7 +139,7 @@ def maybe(combinator, name=None):
     def _maybe(x, ctx=None):
         new_ctx = context.create(ctx)
         new_ctx.append(name)
-        _assert(_maybe.is_type(x), ctx=new_ctx, found_type=type(x))
+        _assert(_maybe.is_type(x), ctx=new_ctx, found_type=type(x), expected='None or {}'.format(get_type_name(combinator)))
 
         return combinator(x, new_ctx) if x else None
 
@@ -332,11 +332,7 @@ def generic_object(fields_combinators: dict, object_type):
             cur_field_combinator = fields_combinators[field]
 
             field_new_ctx = context.create(new_ctx)
-            if field_new_ctx.empty:
-                ctx_data_to_append = '{}.{}'.format(name, field)
-            else:
-                ctx_data_to_append = '{}'.format(field)
-            field_new_ctx.append(ctx_data_to_append)
+            field_new_ctx.append(field)
             cur_field_combinator(getattr(x, field), ctx=field_new_ctx)
 
         return x
