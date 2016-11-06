@@ -1,4 +1,4 @@
-from pycomb import combinators as t
+from pycomb import combinators as t, context as ctx
 from pycomb.test import util
 from unittest.case import TestCase
 
@@ -45,11 +45,8 @@ class TestList(TestCase):
         self.assertTrue(self.MyElement.is_type(instance[0]))
 
     def test_hydrate_production(self):
-    #    , util.production(function () {
-    #      var instance = MyList([{}]);
-    #      assert.equal(MyElement.is(instance[0]), true);
-    #    }));
-        self.fail(msg='TODO: Implement production mode!')
+        instance = self.MyList([{}], ctx=ctx.create(production_mode=True))
+        self.assertTrue(self.MyElement.is_type(instance[0]))
 
     def test_should_be_idempotent(self):
         numbers0 = [1, 2]
@@ -66,32 +63,22 @@ class TestList(TestCase):
         self.assertTrue(path1 == path2)
 
     def test_should_be_idempotent_production(self):
-    #    , util.production(function () {
-    #      var numbers0 = [1, 2];
-    #      var numbers1 = ListOfNumbers(numbers0);
-    #      var numbers2 = ListOfNumbers(numbers1);
-    #      assert.equal(numbers0 === numbers1, true);
-    #      assert.equal(numbers1 === numbers2, true);
+        production_ctx = ctx.create(production_mode=True)
+        numbers0 = [1, 2]
+        numbers1 = self.ListOfNumbers(numbers0, ctx=production_ctx)
+        numbers2 = self.ListOfNumbers(numbers1, ctx=production_ctx)
+        self.assertTrue(numbers0 is numbers1)
+        self.assertTrue(numbers1 is numbers2)
 
-    #      var path0 = [{x: 0, y: 0}, {x: 1, y: 1}];
-    #      var path1 = Path(path0);
-    #      var path2 = Path(path1);
-    #      assert.equal(path0 === path1, false);
-    #      assert.equal(path1 === path2, true);
-    #    }));
-        self.fail(msg='TODO: Implement production mode!')
+        path0 = [{'x': 0, 'y': 0}, {'x': 1, 'y': 1}]
+        path1 = self.Path(path0, ctx=production_ctx)
+        path2 = self.Path(path1, ctx=production_ctx)
+        self.assertTrue(path0 is path1)
+        self.assertTrue(path1 is path2)
 
     def test_should_freeze_the_instance(self):
         instance = self.ListOfNumbers([1, 2])
         self.assertEqual(type(instance), tuple)
-
-    def test_should_not_freeze_instance_in_production(self):
-        self.fail(msg='TODO: Implement production mode!')
-    # , util.production(function () {
-    #      var instance = ListOfNumbers([1, 2]);
-    #      assert.equal(Object.isFrozen(instance), false);
-    #    }));
-    #  });
 
     def test_list_type_should_return_true_when_x_is_list_of_type(self):
         self.assertTrue(self.PathOfPoint.is_type([]))

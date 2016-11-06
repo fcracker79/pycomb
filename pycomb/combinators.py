@@ -1,3 +1,5 @@
+from functools import wraps
+
 from pycomb import predicates as p, context
 
 _orig_list = list
@@ -8,13 +10,16 @@ def get_type_name(type_obj):
 
 
 def _assert(guard, ctx, expected=None, found_type=None):
-    if not guard:
+    if not guard and not ctx.production_mode:
         ctx.notify_error(expected, found_type)
 
 
 def irreducible(predicate, name='Irreducible'):
     def _irreducible(value, ctx=None):
         new_ctx = context.create(ctx)
+        if new_ctx.production_mode:
+            return value
+
         if new_ctx.empty:
             new_ctx.append(name)
 
@@ -42,6 +47,9 @@ def list(combinator_element, name=None):
 
     def _list(x, ctx=None):
         new_ctx_list = context.create(ctx)
+        if new_ctx_list.production_mode:
+            return x
+
         if new_ctx_list.empty:
             new_ctx_list.append(name)
 
@@ -84,6 +92,9 @@ def struct(combinators, name=None):
 
     def _struct(x, ctx=None):
         ctx = context.create(ctx)
+        if ctx.production_mode:
+            return x
+
         if ctx.empty:
             ctx.append(name)
 
@@ -117,6 +128,9 @@ def maybe(combinator, name=None):
 
     def _maybe(x, ctx=None):
         new_ctx = context.create(ctx)
+        if new_ctx.production_mode:
+            return x
+
         new_ctx.append(name)
         _assert(
             _maybe.is_type(x), ctx=new_ctx,
@@ -146,6 +160,9 @@ def union(*combinators, name=None, dispatcher=None):
 
     def _union(x, ctx=None):
         new_ctx = context.create(ctx)
+        if new_ctx.production_mode:
+            return x
+
         if new_ctx.empty:
             new_ctx.append(name)
         _assert(_union.is_type(x), ctx=new_ctx,
@@ -175,6 +192,9 @@ def intersection(*combinators, name=None, dispatcher=None):
 
     def _intersection(x, ctx=None):
         new_ctx = context.create(ctx)
+        if new_ctx.production_mode:
+            return x
+
         new_ctx.append(name)
         _assert(_intersection.is_type(x), ctx=new_ctx,
                 expected=' or '.join(map(lambda d: get_type_name(d), combinators)),
@@ -202,6 +222,9 @@ def subtype(combinator, condition, name=None):
 
     def _subtype(x, ctx=None):
         new_ctx = context.create(ctx)
+        if new_ctx.production_mode:
+            return x
+
         new_ctx.append(name)
         _assert(_subtype.is_type(x), ctx=new_ctx, expected=name, found_type=type(x))
 
@@ -225,6 +248,9 @@ def enum(values, name=None):
 
     def _enum(x, ctx=None):
         new_ctx = context.create(ctx)
+        if new_ctx.production_mode:
+            return x
+
         new_ctx.append(name)
 
         _assert(_enum.is_type(x), ctx=new_ctx,
@@ -251,7 +277,11 @@ enum.of = lambda l, name=None: enum({k: k for k in l}, name=name)
 
 def _typedef(args, kwargs, ctx=None):
     def wrapper(fun):
+        @wraps(fun)
         def f(*inner_args, **inner_kwargs):
+            if ctx and ctx.production_mode:
+                return fun(*inner_args, **inner_kwargs)
+
             _assert(len(args) == len(inner_args), ctx=ctx, expected='{} arguments'.format(len(args)),
                     found_type='{} arguments'.format(len(inner_args)))
 
@@ -282,6 +312,9 @@ def function(*args, **kwargs):
 
     def _function(x, ctx=None):
         new_ctx = context.create(ctx)
+        if new_ctx.production_mode:
+            return x
+
         new_ctx.append(name)
 
         _assert(_function.is_type(x), ctx=new_ctx, expected=name, found_type=type(x))
@@ -305,6 +338,9 @@ def generic_object(fields_combinators: dict, object_type):
 
     def _object(x, ctx=None):
         new_ctx = context.create(ctx)
+        if new_ctx.production_mode:
+            return x
+
         new_ctx.append(name)
 
         _assert(type(x) == object_type, ctx=new_ctx, expected=name, found_type=type(x))
