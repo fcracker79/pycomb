@@ -13,4 +13,3 @@ def throws_with_message(*messages):
         msg in messages,
         msg='Message: {}\nPossible messages: {}'.format(msg, messages)
     )
-    return e.exception
