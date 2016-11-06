@@ -186,7 +186,7 @@ def _union_all_versions(*combinators, **kwargs):
         else:
             default_combinator = _default_composite_dispatcher(x, combinators)
 
-        return default_combinator(x, ctx=new_ctx)
+        return default_combinator(x, ctx=new_ctx) if default_combinator else None
 
     _union.is_type = lambda d: any(combinator.is_type(d) for combinator in combinators)
 

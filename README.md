@@ -13,14 +13,15 @@ Installation
 pip install pycomb
 ```
 
-**Usage examples**
+Usage examples
+--------------
 
 ```python
 
 from pycomb import combinators
 
 # A simple string
-MyStringType = c.String
+MyStringType = combinators.String
 s1 = combinators.String('hello')  # This IS a 'str' object
 s2 = combinators.String(10)  # This will fail
 
@@ -35,6 +36,36 @@ my_user = User({'name': 'John Burns', 'age': 30})  # This IS a dict
 my_user2 = User({'name': 'John Burns', 'age': '30'})  # This will fail
 my_user3 = User({'name': 'John Burns', 'age': 30, 'city': 'New York'})  # This IS a dict
 
+# Subtypes
+SmallString = c.subtype(c.String, lambda d: len(d) <= 10)  # Strings shorter than 11 characters
+SmallString('12345678901')  # This will fail
+SmallString('12345')  # This IS a 'str' object
 
 ```
 
+Validation context
+------------------
+The validation procedure runs within a context that controls:
+# The behavior in case of error
+# The production mode: if active, no such error is raised during validation
+
+**Examples**
+
+from pycomb import combinators, context
+
+# Example of production mode
+ListOfNumbers = combinators.list(combinators.Number, 'ListOfNumbers')
+production_ctx = context.create(production_mode=True)
+numbers = ListOfNumbers([1, 2, 'hello'], ctx=production_ctx)  # This will NOT fail
+
+
+# Example of custom behavior in case of error
+class MyObserver(context.ValidationErrorObserver):
+    def on_error(self, ctx, expected_type, found_type):
+        print('Expected {}, got {}'.format(expected_type, found_type))
+
+ListOfNumbers = combinators.list(combinators.Number, 'ListOfNumbers')
+notification_ctx = context.create(validation_error_observer=MyObserver())
+numbers = ListOfNumbers([1, 2, 'hello'], ctx=production_ctx)  # This will NOT fail
+# Expected output:
+# > Expected Int or Float, got <class 'str'>

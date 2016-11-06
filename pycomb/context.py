@@ -104,6 +104,6 @@ _default_validation_error_observer = _DefaultValidationErrorObserver()
 def create(base_ctx=None, validation_error_observer=_default_validation_error_observer,
            production_mode=False):
     result = base_ctx.copy() if base_ctx else ValidationContextImpl(production_mode)
-    if validation_error_observer:
+    if not base_ctx:
         result.add_error_observer(validation_error_observer)
     return result
