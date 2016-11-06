@@ -197,7 +197,17 @@ def _union_all_versions(*combinators, **kwargs):
     return _union
 
 
-def intersection(*combinators, name=None, dispatcher=None):
+if sys.version_info < (3, 2):
+    def intersection(*combinators, **kwargs):
+        return _intersection_all_versions(*combinators, **kwargs)
+else:
+    def intersection(*combinators, name=None, dispatcher=None):
+        return _intersection_all_versions(*combinators, name=name, dispatcher=dispatcher)
+
+
+def _intersection_all_versions(*combinators, **kwargs):
+    name = kwargs.get('name')
+    dispatcher = kwargs.get('dispatcher')
     if not name:
         name = 'Intersection({})'.format(
             ', '.join(map(lambda d: get_type_name(d), combinators)))
