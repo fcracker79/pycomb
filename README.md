@@ -46,6 +46,7 @@ SmallString('12345')  # This IS a 'str' object
 Validation context
 ------------------
 The validation procedure runs within a context that controls:
+
 1. The behavior in case of error
 2. The production mode: if active, no such error is raised during validation
 
@@ -81,12 +82,15 @@ or ensure the type of its return value
 
 ```python
 from pycomb import combinators
+
+# Example of input parameters check
 @combinators.function(combinators.String, combinators.Int, c=combinators.Float, d=combinators.list(combinators.Int))
 def f(a, b, c=None, d=None):
     pass
 f('John', 1, c=1.0, d=[3, 4])  # OK
 f(1, 1, c=1.0, d=[3, 4])  # This will fail
 
+# Example of output check
 @returning(cmb.subtype(cmb.String, lambda d: len(d) < 10))
 def f(n):
     return ' ' * n
@@ -94,3 +98,11 @@ def f(n):
 f(3)  # OK
 f(10)  # This will fail
 ```
+
+More types are supported, such as:
+* Unions
+* Intersections
+* Functions
+* Enums
+
+Please read the test code to find more examples.
