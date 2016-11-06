@@ -109,12 +109,12 @@ def struct(combinators, name=None):
         for k in combinators:
             new_ctx = context.create(ctx)
             new_ctx.append('[{}]'.format(k), separator='')
-            new_dict[k] = combinators[k](x[k], ctx=new_ctx)
+            new_dict[k] = combinators[k](x.get(k), ctx=new_ctx)
         return p.StructType(new_dict)
 
     def _is_type(d):
         return p.is_struct_of(d, combinators) or \
-                               type(d) == dict and all(combinators[k].is_type(d[k]) for k in combinators)
+                               type(d) == dict and all(combinators[k].is_type(d.get(k)) for k in combinators)
 
     _struct.is_type = _is_type
 

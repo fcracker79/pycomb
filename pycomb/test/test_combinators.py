@@ -70,6 +70,10 @@ class TestCombinators(TestCase):
         with(self.assertRaises(TypeError)):
             result.name = 'anotherName'
 
+    def test_struct_maybe_field(self):
+        User = c.struct({'name': c.String, 'age': c.Int, 'city': c.maybe(c.String)})
+        User({'name': 'John Burns', 'age': 30})
+
     def test_struct_list(self):
         r = c.list(c.struct({'name': c.String}))([{'name': 'John'}])
         self.assertEqual(1, len(r))
