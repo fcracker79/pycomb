@@ -87,10 +87,3 @@ class TestList(TestCase):
 
     def test_list_predicate_used_as_predicate(self):
         self.assertTrue(self.PathOfPoint.is_type([self.p1, self.p2]))
-
-    def test_should_return_new_instance(self):
-        ListOfStrings = t.list(t.String)
-        instance = ['a', 'b']
-        new_instance = ListOfStrings.update(instance, {'$push': ['c']})
-        self.assertFalse(new_instance == instance)
-        self.assertEqual(new_instance, ['a', 'b', 'c'])
