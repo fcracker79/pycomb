@@ -156,7 +156,7 @@ def _default_composite_dispatcher(x, combinators):
     return None
 
 
-if sys.version_info <= (2, 7):
+if sys.version_info < (3, 2):
     def union(*combinators, **kwargs):
         return _union_all_versions(*combinators, **kwargs)
 else:
