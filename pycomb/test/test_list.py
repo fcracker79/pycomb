@@ -22,7 +22,7 @@ class TestList(TestCase):
 
     # noinspection PyArgumentList
     def test_list_type_combinator_then(self):
-        with util.throws_with_message('list() missing 1 required positional argument: \'combinator_element\''):
+        with self.assertRaises(TypeError):
             t.list()
 
         with util.throws_with_message(

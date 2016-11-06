@@ -4,7 +4,7 @@ try:
 except ImportError:
     from mock import Mock
 
-from pycomb import combinators as c
+from pycomb import combinators as c, exceptions
 from pycomb.combinators import generic_object, Int
 from pycomb.predicates import StructType
 
@@ -12,7 +12,7 @@ from pycomb.predicates import StructType
 class TestCombinators(TestCase):
     def test(self):
 
-        with(self.assertRaises(ValueError)):
+        with(self.assertRaises(exceptions.PyCombValidationError)):
             c.String(1)
 
         s = c.String('hello')
@@ -21,11 +21,11 @@ class TestCombinators(TestCase):
 
     def test_list(self):
         c.list(c.String)('hello')
-        with(self.assertRaises(ValueError)):
+        with(self.assertRaises(exceptions.PyCombValidationError)):
             c.list(c.String)([1, 2, 3])
         self.assertFalse(c.list(c.String).is_type([1, 2, 3]))
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             c.list(c.String)(['1', 2, '3'])
         e = e.exception
         expected = 'Error on List(String)[1]: expected String but was int'
@@ -40,7 +40,7 @@ class TestCombinators(TestCase):
     def test_tuple(self):
         c.list(c.String)('hello')
 
-        with(self.assertRaises(ValueError)):
+        with(self.assertRaises(exceptions.PyCombValidationError)):
             c.list(c.String)((1, 2, 3))
 
         l = c.list(c.String)(['a', 'b'])
@@ -51,10 +51,10 @@ class TestCombinators(TestCase):
 
     def test_struct(self):
         d = {'name': c.String, 'value': c.Int}
-        with(self.assertRaises(ValueError)):
+        with(self.assertRaises(exceptions.PyCombValidationError)):
             c.struct(d)('hello')
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             c.struct(d)({'name': 0, 'value': 1})
 
         e = e.exception
@@ -87,7 +87,7 @@ class TestCombinators(TestCase):
         self.assertEqual('Mirko', r.name)
         self.assertEqual(36, r.data.age)
 
-        with self.assertRaises(ValueError) as exception:
+        with self.assertRaises(exceptions.PyCombValidationError) as exception:
             c.struct({'name': c.String, 'data': c.struct({'age': c.Int})})({'name': 'Mirko', 'data': {'age': '36'}})
         exception = exception.exception
         self.assertTrue(
@@ -98,12 +98,12 @@ class TestCombinators(TestCase):
             msg=exception.args[0])
 
     def test_maybe(self):
-        with(self.assertRaises(ValueError)):
+        with(self.assertRaises(exceptions.PyCombValidationError)):
             c.String(None)
         self.assertIsNone(c.maybe(c.String)(None))
         my_maybe = c.maybe(c.String)
         self.assertEqual('hello', my_maybe('hello'))
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             my_maybe(1)
         self.assertEquals(
             'Error on Maybe (String): expected None or String but was int',
@@ -113,7 +113,7 @@ class TestCombinators(TestCase):
         my_maybe = c.maybe(c.String, name='MyMaybe')
         self.assertIsNone(my_maybe(None))
         self.assertEqual('hello', my_maybe('hello'))
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             my_maybe(1)
         self.assertEquals(
             'Error on MyMaybe: expected None or String but was int',
@@ -122,7 +122,7 @@ class TestCombinators(TestCase):
     def test_subtype(self):
         SmallString = c.subtype(c.String, lambda d: len(d) <= 10)
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             SmallString('12345678901')
         e = e.exception
         self.assertEqual('Error on Subtype(String): expected Subtype(String) but was str', e.args[0])
@@ -131,7 +131,7 @@ class TestCombinators(TestCase):
     def test_named_subtype(self):
         SmallString = c.subtype(c.String, lambda d: len(d) <= 10, name='SmallString')
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             SmallString('12345678901')
         e = e.exception
         self.assertEqual('Error on SmallString: expected SmallString but was str', e.args[0])
@@ -143,7 +143,7 @@ class TestCombinators(TestCase):
         self.assertEqual(1.0, Number(1.0))
         self.assertEqual(2, Number(2))
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             Number('hello')
         e = e.exception
         self.assertEqual('Error on Union(Int, Float): expected Int or Float but was str', e.args[0])
@@ -152,13 +152,13 @@ class TestCombinators(TestCase):
         Number = c.union(c.Int, c.Float, dispatcher=lambda _: c.Float)
 
         self.assertEqual(1.0, Number(1.0))
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             self.assertEqual(2, Number(2))
         self.assertEqual(
             'Error on Union(Int, Float): expected Float but was int',
             e.exception.args[0])
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             Number('hello')
         e = e.exception
         self.assertEqual('Error on Union(Int, Float): expected Int or Float but was str', e.args[0])
@@ -171,7 +171,7 @@ class TestCombinators(TestCase):
         d = my_type({'name': 'mirko', 'age': 36})
         self.assertEqual('mirko', d.name)
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             my_type({'name': 'mirko', 'age': '36'})
         e = e.exception
         self.assertEqual(
@@ -179,7 +179,7 @@ class TestCombinators(TestCase):
             'expected Struct{name: String} or Struct{age: Int} but was dict',
             e.args[0])
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             my_type('Hello')
         e = e.exception
         self.assertEqual(
@@ -195,7 +195,7 @@ class TestCombinators(TestCase):
         d = my_type({'name': 'mirko', 'age': 36})
         self.assertEqual(36, d.age)
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             my_type({'name': 'mirko', 'age': '36'})
         e = e.exception
         self.assertEqual(
@@ -211,7 +211,7 @@ class TestCombinators(TestCase):
         d = my_type({'name': 'mirko', 'age': 36})
         self.assertEqual('mirko', d.name)
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             my_type({'name': 'mirko', 'age': '36'})
         e = e.exception
         self.assertEqual(
@@ -229,7 +229,7 @@ class TestCombinators(TestCase):
         e = Enum('V1')
         self.assertEqual('1', e)
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             Enum('V4')
         e = e.exception
         self.assertEqual('Error on Enum(V1: 1, V2: 2, V3: 3): expected V1 or V2 or V3 but was V4', e.args[0])
@@ -244,7 +244,7 @@ class TestCombinators(TestCase):
         e = Enum('V1')
         self.assertEqual('1', e)
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             Enum('V4')
         e = e.exception
         self.assertEqual('Error on MyEnum: expected V1 or V2 or V3 but was V4', e.args[0])
@@ -261,7 +261,7 @@ class TestCombinators(TestCase):
         self.assertEqual('b', Enum.b)
         self.assertEqual('c', Enum.c)
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             Enum('V4')
         e = e.exception
         self.assertEqual('Error on Enum(a: a, b: b, c: c): expected a or b or c but was V4', e.args[0])
@@ -275,7 +275,7 @@ class TestCombinators(TestCase):
         new_f = Fun(f)
         self.assertTrue(callable(new_f))
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             new_f()
         e = e.exception
         self.assertTrue(
@@ -287,7 +287,7 @@ class TestCombinators(TestCase):
             )
         )
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             Fun('Hello')
         e = e.exception
         self.assertTrue(e.args[0] in (
@@ -319,7 +319,7 @@ class TestCombinators(TestCase):
 
         type1 = generic_object({'f1': Int, 'f2': Int}, TestClass)
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             type1(t)
         e = e.exception
         self.assertEqual(
@@ -328,14 +328,14 @@ class TestCombinators(TestCase):
         self.assertFalse(type1.is_type(t))
         t = TestClass(20, 3.5)
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             type1(t)
         e = e.exception
         self.assertEqual(
             'Error on TestClass.f2: expected Int but was float',
             e.args[0])
         self.assertFalse(type1.is_type(t))
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
             type1('hello')
         e = e.exception
         self.assertEqual(

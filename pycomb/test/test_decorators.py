@@ -1,5 +1,5 @@
 from unittest import TestCase
-from pycomb import combinators as cmb
+from pycomb import combinators as cmb, exceptions
 from pycomb.decorators import returning
 
 
@@ -12,10 +12,10 @@ class TestDecorators(TestCase):
 
         f('John', 1, c=1.0, d=[3, 4])
 
-        with(self.assertRaises(ValueError)):
+        with(self.assertRaises(exceptions.PyCombValidationError)):
             f(1, 1, c=1.0, d=[3, 4])
 
-        with(self.assertRaises(ValueError)):
+        with(self.assertRaises(exceptions.PyCombValidationError)):
             f('John', 1, c=1.0, d=['3', 4])
 
     def test_returning(self):
@@ -25,5 +25,5 @@ class TestDecorators(TestCase):
 
         self.assertEqual('   ', f(3))
 
-        with(self.assertRaises(ValueError)):
+        with(self.assertRaises(exceptions.PyCombValidationError)):
             f(10)

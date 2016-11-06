@@ -1,4 +1,5 @@
 import abc
+from pycomb import exceptions
 
 
 class ValidationErrorObserver(metaclass=abc.ABCMeta):
@@ -81,7 +82,7 @@ class ValidationContextImpl(ValidationContext):
 
 def _assert_msg(guard, msg, ctx):
     if not guard:
-        raise ValueError(_generate_error_message(ctx, msg=msg))
+        raise exceptions.PyCombValidationError(_generate_error_message(ctx, msg=msg))
 
 
 def _generate_error_message(ctx, expected=None, found_type=None, msg=None):
@@ -93,7 +94,9 @@ def _generate_error_message(ctx, expected=None, found_type=None, msg=None):
 class _DefaultValidationErrorObserver(ValidationErrorObserver):
     def on_error(self, ctx, expected_type, found_type):
         found_type = found_type if type(found_type) is str else found_type.__name__
-        raise ValueError(_generate_error_message(ctx, expected_type, found_type))
+        raise exceptions.PyCombValidationError(
+            _generate_error_message(ctx, expected_type, found_type),
+            expected_type=expected_type, found_type=found_type)
 
 _default_validation_error_observer = _DefaultValidationErrorObserver()
 
