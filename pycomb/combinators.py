@@ -1,3 +1,5 @@
+import sys
+
 from functools import wraps
 
 from pycomb import predicates as p, context
@@ -154,7 +156,17 @@ def _default_composite_dispatcher(x, combinators):
     return None
 
 
-def union(*combinators, name=None, dispatcher=None):
+if sys.version_info <= (2, 7):
+    def union(*combinators, **kwargs):
+        return _union_all_versions(*combinators, **kwargs)
+else:
+    def union(*combinators, name=None, dispatcher=None):
+        return _union_all_versions(*combinators, name=name, dispatcher=dispatcher)
+
+
+def _union_all_versions(*combinators, **kwargs):
+    name = kwargs.get('name')
+    dispatcher = kwargs.get('dispatcher')
     if not name:
         name = 'Union({})'.format(', '.join(map(lambda d: get_type_name(d), combinators)))
 
