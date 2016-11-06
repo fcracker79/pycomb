@@ -13,7 +13,7 @@ Installation
 pip install pycomb
 ```
 
-Usage examples
+Basic examples
 --------------
 
 ```python
@@ -49,8 +49,9 @@ The validation procedure runs within a context that controls:
 # The behavior in case of error
 # The production mode: if active, no such error is raised during validation
 
-**Examples**
+**Context Examples**
 
+```python
 from pycomb import combinators, context
 
 # Example of production mode
@@ -69,3 +70,27 @@ notification_ctx = context.create(validation_error_observer=MyObserver())
 numbers = ListOfNumbers([1, 2, 'hello'], ctx=production_ctx)  # This will NOT fail
 # Expected output:
 # > Expected Int or Float, got <class 'str'>
+```
+
+Decorators
+----------
+It is possible to wrap functions in order to protect the input parameters,
+or ensure the type of its return value
+
+**Decorators example**
+
+```python
+from pycomb import combinators
+@combinators.function(combinators.String, combinators.Int, c=combinators.Float, d=combinators.list(combinators.Int))
+def f(a, b, c=None, d=None):
+    pass
+f('John', 1, c=1.0, d=[3, 4])  # OK
+f(1, 1, c=1.0, d=[3, 4])  # This will fail
+
+@returning(cmb.subtype(cmb.String, lambda d: len(d) < 10))
+def f(n):
+    return ' ' * n
+
+f(3)  # OK
+f(10)  # This will fail
+```
