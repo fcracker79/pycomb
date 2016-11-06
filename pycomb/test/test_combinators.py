@@ -1,5 +1,9 @@
 from unittest import TestCase
-from unittest.mock import Mock
+try:
+    from unittest.mock import Mock
+except ImportError:
+    from mock import Mock
+
 from pycomb import combinators as c
 from pycomb.combinators import generic_object, Int
 from pycomb.predicates import StructType
