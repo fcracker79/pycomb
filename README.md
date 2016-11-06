@@ -46,8 +46,8 @@ SmallString('12345')  # This IS a 'str' object
 Validation context
 ------------------
 The validation procedure runs within a context that controls:
-# The behavior in case of error
-# The production mode: if active, no such error is raised during validation
+1. The behavior in case of error
+2. The production mode: if active, no such error is raised during validation
 
 **Context Examples**
 
