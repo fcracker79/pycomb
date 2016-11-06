@@ -7,21 +7,9 @@ def get_type_name(type_obj):
     return type_obj.meta['name']
 
 
-def _assert_msg(guard, msg, ctx):
-    if not guard:
-        raise ValueError(_generate_error_message(ctx, msg=msg))
-
-
 def _assert(guard, ctx, expected=None, found_type=None):
     if not guard:
-        found_type = found_type if type(found_type) is str else found_type.__name__
-        raise ValueError(_generate_error_message(ctx, expected, found_type))
-
-
-def _generate_error_message(ctx, expected=None, found_type=None, msg=None):
-    return 'Error on {}: {}'.format(ctx.path, msg) if msg \
-        else 'Error on {}: expected {} but was {}'.format(
-            ctx.path, expected, found_type)
+        ctx.notify_error(expected, found_type)
 
 
 def irreducible(predicate, name='Irreducible'):
@@ -57,7 +45,8 @@ def list(combinator_element, name=None):
         if new_ctx_list.empty:
             new_ctx_list.append(name)
 
-        _assert_msg(x, 'missing 1 required positional argument: \'x\'', ctx=new_ctx_list)
+        if not x:
+            raise ValueError('Error on {}: missing 1 required positional argument: \'x\''.format(new_ctx_list.path))
 
         result = []
         i = 0

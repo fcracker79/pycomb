@@ -1,7 +1,23 @@
 import abc
 
 
-class ValidationContext(metaclass=abc.ABCMeta):
+class ValidationErrorObserver(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def on_error(self, ctx, expected_type, found_type):
+        pass
+
+
+class ValidationErrorObservable(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def add_error_listener(self, error_listener):
+        pass
+
+    @abc.abstractmethod
+    def notify_error(self, expected_type, found_type):
+        pass
+
+
+class ValidationContext(ValidationErrorObservable, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def append(self, path_element):
         pass  # pragma: no cover
@@ -20,6 +36,7 @@ class ValidationContextImpl(ValidationContext):
     def __init__(self):
         self._path = []
         self._path_str = None
+        self._error_listeners = []
 
     def append(self, path_element, separator='.'):
         self._path_str = None
@@ -41,8 +58,39 @@ class ValidationContextImpl(ValidationContext):
         result = ValidationContextImpl()
         result._path = [x for x in self._path]
         result._path_str = self._path_str
+        result._error_listeners = [x for x in self._error_listeners]
         return result
 
+    def add_error_listener(self, error_listener):
+        self._error_listeners.append(error_listener)
 
-def create(base_ctx=None):
-    return base_ctx.copy() if base_ctx else ValidationContextImpl()
+    def notify_error(self, expected_type, found_type):
+        for l in self._error_listeners:
+            l.on_error(self, expected_type, found_type)
+
+
+def _assert_msg(guard, msg, ctx):
+    if not guard:
+        raise ValueError(_generate_error_message(ctx, msg=msg))
+
+
+def _generate_error_message(ctx, expected=None, found_type=None, msg=None):
+    return 'Error on {}: {}'.format(ctx.path, msg) if msg \
+        else 'Error on {}: expected {} but was {}'.format(
+            ctx.path, expected, found_type)
+
+
+class _DefaultValidationErrorObserver(ValidationErrorObserver):
+    def on_error(self, ctx, expected_type, found_type):
+        found_type = found_type if type(found_type) is str else found_type.__name__
+        raise ValueError(_generate_error_message(ctx, expected_type, found_type))
+
+_default_validation_error_observer = _DefaultValidationErrorObserver()
+
+
+def create(base_ctx=None, validation_error_observer=_default_validation_error_observer):
+    result = base_ctx.copy() if base_ctx else ValidationContextImpl()
+    if validation_error_observer:
+        result.add_error_listener(validation_error_observer)
+    return result
+
