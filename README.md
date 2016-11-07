@@ -106,5 +106,6 @@ More types are supported, such as:
 * Intersections
 * Functions
 * Enums
+* ...
 
 Please read the test code to find more examples.
