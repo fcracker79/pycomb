@@ -4,7 +4,7 @@ PyComb
 ======
 
 
-[Tcomb](http://www.github.com/tcomb) port for Python 3
+[Tcomb](http://www.github.com/gcanti/tcomb) port for Python 3
 
 Installation
 ------------
