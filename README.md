@@ -84,7 +84,9 @@ or ensure the type of its return value
 from pycomb import combinators
 
 # Example of input parameters check
-@combinators.function(combinators.String, combinators.Int, c=combinators.Float, d=combinators.list(combinators.Int))
+@combinators.function(
+    combinators.String, combinators.Int,
+    c=combinators.Float, d=combinators.list(combinators.Int))
 def f(a, b, c=None, d=None):
     pass
 f('John', 1, c=1.0, d=[3, 4])  # OK
