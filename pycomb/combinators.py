@@ -11,7 +11,7 @@ def get_type_name(type_obj):
     return type_obj.meta['name']
 
 
-def _assert(guard, ctx, expected=None, found_type=None):
+def assert_type(guard, ctx, expected=None, found_type=None):
     if not guard and not ctx.production_mode:
         ctx.notify_error(expected, found_type)
 
@@ -25,7 +25,7 @@ def irreducible(predicate, name='Irreducible'):
         if new_ctx.empty:
             new_ctx.append(name)
 
-        _assert(_irreducible.is_type(value), ctx=new_ctx, expected=name, found_type=type(value))
+        assert_type(_irreducible.is_type(value), ctx=new_ctx, expected=name, found_type=type(value))
 
         return value
 
@@ -100,7 +100,7 @@ def struct(combinators, name=None):
         if ctx.empty:
             ctx.append(name)
 
-        _assert(_struct.is_type(x) or type(x) is dict, ctx=ctx, expected=name, found_type=type(x))
+        assert_type(_struct.is_type(x) or type(x) is dict, ctx=ctx, expected=name, found_type=type(x))
 
         if type(x) == p.StructType:
             return x
@@ -134,7 +134,7 @@ def maybe(combinator, name=None):
             return x
 
         new_ctx.append(name)
-        _assert(
+        assert_type(
             _maybe.is_type(x), ctx=new_ctx,
             found_type=type(x), expected='None or {}'.format(get_type_name(combinator)))
 
@@ -177,8 +177,8 @@ def _union_all_versions(*combinators, **kwargs):
 
         if new_ctx.empty:
             new_ctx.append(name)
-        _assert(_union.is_type(x), ctx=new_ctx,
-                expected=' or '.join(map(lambda d: get_type_name(d), combinators)), found_type=type(x))
+        assert_type(_union.is_type(x), ctx=new_ctx,
+                    expected=' or '.join(map(lambda d: get_type_name(d), combinators)), found_type=type(x))
 
         if dispatcher:
             default_combinator = dispatcher(x)
@@ -218,9 +218,9 @@ def _intersection_all_versions(*combinators, **kwargs):
             return x
 
         new_ctx.append(name)
-        _assert(_intersection.is_type(x), ctx=new_ctx,
-                expected=' or '.join(map(lambda d: get_type_name(d), combinators)),
-                found_type=type(x))
+        assert_type(_intersection.is_type(x), ctx=new_ctx,
+                    expected=' or '.join(map(lambda d: get_type_name(d), combinators)),
+                    found_type=type(x))
 
         if dispatcher:
             default_combinator = dispatcher(x)
@@ -248,7 +248,7 @@ def subtype(combinator, condition, name=None):
             return x
 
         new_ctx.append(name)
-        _assert(_subtype.is_type(x), ctx=new_ctx, expected=name, found_type=type(x))
+        assert_type(_subtype.is_type(x), ctx=new_ctx, expected=name, found_type=type(x))
 
         return combinator(x, new_ctx)
 
@@ -275,9 +275,9 @@ def enum(values, name=None):
 
         new_ctx.append(name)
 
-        _assert(_enum.is_type(x), ctx=new_ctx,
-                expected=' or '.join(sorted_enums),
-                found_type=str(x))
+        assert_type(_enum.is_type(x), ctx=new_ctx,
+                    expected=' or '.join(sorted_enums),
+                    found_type=str(x))
 
         return values[x]
 
@@ -304,8 +304,8 @@ def _typedef(args, kwargs, ctx=None):
             if ctx and ctx.production_mode:
                 return fun(*inner_args, **inner_kwargs)
 
-            _assert(len(args) == len(inner_args), ctx=ctx, expected='{} arguments'.format(len(args)),
-                    found_type='{} arguments'.format(len(inner_args)))
+            assert_type(len(args) == len(inner_args), ctx=ctx, expected='{} arguments'.format(len(args)),
+                        found_type='{} arguments'.format(len(inner_args)))
 
             for i in range(len(args)):
                 args[i](inner_args[i])
@@ -339,7 +339,7 @@ def function(*args, **kwargs):
 
         new_ctx.append(name)
 
-        _assert(_function.is_type(x), ctx=new_ctx, expected=name, found_type=type(x))
+        assert_type(_function.is_type(x), ctx=new_ctx, expected=name, found_type=type(x))
 
         return x if '__pycomb__meta__' in dir(x) else _typedef(args, kwargs, ctx=new_ctx)(x)
 
@@ -365,7 +365,7 @@ def generic_object(fields_combinators: dict, object_type):
 
         new_ctx.append(name)
 
-        _assert(type(x) == object_type, ctx=new_ctx, expected=name, found_type=type(x))
+        assert_type(type(x) == object_type, ctx=new_ctx, expected=name, found_type=type(x))
 
         for field in fields_combinators:
             cur_field_combinator = fields_combinators[field]
