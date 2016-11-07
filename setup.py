@@ -1,20 +1,19 @@
 import os
 import sys
 
-try:
-    from setuptools import setup, find_packages
+from setuptools import setup, find_packages
 
-except ImportError:
-    from distutils.core import setup
 
-major, minor1, minor2, release, serial =  sys.version_info
+major, minor1, minor2, release, serial = sys.version_info
 
 readfile_kwargs = {"encoding": "utf-8"} if major >= 3 else {}
+
 
 def readfile(filename):
     with open(filename, **readfile_kwargs) as fp:
         contents = fp.read()
     return contents
+
 
 def get_packages(path):
     out = [path]
