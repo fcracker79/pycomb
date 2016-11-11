@@ -33,4 +33,16 @@ setup(name='pycomb',
       packages=packages,
       install_requires=readfile(os.path.join(os.path.dirname(__file__), "requirements.txt")),
       zip_safe=False,
-      test_suite="pycomb.test")
+      test_suite="pycomb.test",
+      classifiers=[
+          'Development Status :: 4 - Beta',
+          'Intended Audience :: Developers',
+          'Topic :: Software Development',
+          'License :: OSI Approved :: MIT License',
+          'Programming Language :: Python :: 3.2',
+          'Programming Language :: Python :: 3.3',
+          'Programming Language :: Python :: 3.4',
+          'Programming Language :: Python :: 3.5',
+      ],
+      keywords='type hinting validation combinator'
+      )
