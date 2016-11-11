@@ -1,12 +1,42 @@
 from unittest import TestCase
 try:
+    from unittest import mock
     from unittest.mock import Mock
 except ImportError:
+    import mock
     from mock import Mock
 
-from pycomb import combinators as c, exceptions
+from pycomb import combinators as c, exceptions, context
 from pycomb.combinators import generic_object, Int
 from pycomb.predicates import StructType
+
+
+class _AnyContext(context.ValidationContext):
+    @property
+    def empty(self):
+        raise ValueError
+
+    def append(self, path_element):
+        raise ValueError
+
+    def path(self):
+        raise ValueError
+
+    @property
+    def production_mode(self):
+        raise ValueError
+
+    def notify_error(self, expected_type, found_type):
+        raise ValueError
+
+    def add_error_observer(self, error_observer):
+        raise ValueError
+
+    def __eq__(self, other):
+        return isinstance(other, context.ValidationContext)
+
+
+_ANY_CONTEXT = _AnyContext()
 
 
 class TestCombinators(TestCase):
@@ -29,13 +59,44 @@ class TestCombinators(TestCase):
             c.list(c.String)(['1', 2, '3'])
         e = e.exception
         expected = 'Error on List(String)[1]: expected String but was int'
-        self.assertEquals(expected, e.args[0])
+        self.assertEqual(expected, e.args[0])
         l = c.list(c.String)(['a', 'b'])
         self.assertEqual(tuple, type(l))
         self.assertEqual(2, len(l))
         self.assertEqual('a', l[0])
         self.assertEqual('b', l[1])
         self.assertTrue(c.list(c.String).is_type(['a', 'b']))
+
+    def test_list_custom_error(self):
+        observer = Mock()
+        ctx = context.create(validation_error_observer=observer)
+        c.list(c.String)('hello', ctx=ctx)
+        self.assertEqual(0, observer.on_error.call_count)
+        c.list(c.String)([1, 2, 3], ctx=ctx)
+        observer.on_error.assert_has_calls(
+            [
+                mock.call(_ANY_CONTEXT, 'String', int),
+                mock.call(_ANY_CONTEXT, 'String', int),
+                mock.call(_ANY_CONTEXT, 'String', int)
+            ])
+        self.assertFalse(c.list(c.String).is_type([1, 2, 3]))
+        observer.reset_mock()
+        c.list(c.String)(['1', 2, '3'], ctx=ctx)
+        observer.on_error.assert_called_once_with(_ANY_CONTEXT, 'String', int)
+        observer.reset_mock()
+        self.assertIsNone(
+            c.list(c.String)(None, ctx=ctx)
+        )
+        observer.on_error.assert_called_once_with(_ANY_CONTEXT, 'List', type(None))
+
+    def test_list_production(self):
+        self.assertEqual(
+            [1, 2, 3],
+            c.list(c.String)([1, 2, 3], ctx=context.create(production_mode=True))
+        )
+        self.assertIsNone(
+            c.list(c.String)(None, ctx=context.create(production_mode=True))
+        )
 
     def test_tuple(self):
         c.list(c.String)('hello')
@@ -48,6 +109,20 @@ class TestCombinators(TestCase):
         self.assertEqual(2, len(l))
         self.assertEqual('a', l[0])
         self.assertEqual('b', l[1])
+
+    def test_tuple_custom_error(self):
+        observer = Mock()
+        ctx = context.create(validation_error_observer=observer)
+        c.list(c.String)('hello')
+
+        c.list(c.String)((1, 2, 3), ctx=ctx)
+        observer.on_error.assert_has_calls(
+            [
+                mock.call(_ANY_CONTEXT, 'String', int),
+                mock.call(_ANY_CONTEXT, 'String', int),
+                mock.call(_ANY_CONTEXT, 'String', int)
+            ]
+        )
 
     def test_struct(self):
         d = {'name': c.String, 'value': c.Int}
@@ -69,6 +144,20 @@ class TestCombinators(TestCase):
 
         with(self.assertRaises(TypeError)):
             result.name = 'anotherName'
+
+    def test_struct_custom_error(self):
+        observer = Mock()
+        ctx = context.create(validation_error_observer=observer)
+        d = {'name': c.String, 'value': c.Int}
+        c.struct(d)('hello', ctx=ctx)
+        call = observer.on_error.call_args_list
+        self.assertEqual(1, len(call))
+        call = call[0]
+        self.assertTrue(
+            call == mock.call(_ANY_CONTEXT, 'Struct{value: Int, name: String}', str) or \
+            call == mock.call(_ANY_CONTEXT, 'Struct{name: String, value: Int}', str),
+            msg=str(call)
+        )
 
     def test_struct_maybe_field(self):
         User = c.struct({'name': c.String, 'age': c.Int, 'city': c.maybe(c.String)})
@@ -109,7 +198,7 @@ class TestCombinators(TestCase):
         self.assertEqual('hello', my_maybe('hello'))
         with self.assertRaises(exceptions.PyCombValidationError) as e:
             my_maybe(1)
-        self.assertEquals(
+        self.assertEqual(
             'Error on Maybe (String): expected None or String but was int',
             e.exception.args[0])
 
@@ -119,7 +208,7 @@ class TestCombinators(TestCase):
         self.assertEqual('hello', my_maybe('hello'))
         with self.assertRaises(exceptions.PyCombValidationError) as e:
             my_maybe(1)
-        self.assertEquals(
+        self.assertEqual(
             'Error on MyMaybe: expected None or String but was int',
             e.exception.args[0])
 
@@ -131,6 +220,13 @@ class TestCombinators(TestCase):
         e = e.exception
         self.assertEqual('Error on Subtype(String): expected Subtype(String) but was str', e.args[0])
         self.assertEqual('12345', SmallString('12345'))
+
+    def test_subtype_custom_error(self):
+        observer = Mock()
+        ctx = context.create(validation_error_observer=observer)
+        SmallString = c.subtype(c.String, lambda d: len(d) <= 10)
+        SmallString('12345678901', ctx=ctx)
+        observer.on_error.assert_called_once_with(_ANY_CONTEXT, 'Subtype(String)', str)
 
     def test_named_subtype(self):
         SmallString = c.subtype(c.String, lambda d: len(d) <= 10, name='SmallString')
@@ -151,6 +247,13 @@ class TestCombinators(TestCase):
             Number('hello')
         e = e.exception
         self.assertEqual('Error on Union(Int, Float): expected Int or Float but was str', e.args[0])
+
+    def test_union_custom_error(self):
+        observer = Mock()
+        ctx = context.create(validation_error_observer=observer)
+        Number = c.union(c.Int, c.Float)
+        Number('hello', ctx=ctx)
+        observer.on_error.assert_called_once_with(_ANY_CONTEXT, 'Int or Float', str)
 
     def test_union_dispatcher(self):
         Number = c.union(c.Int, c.Float, dispatcher=lambda _: c.Float)
@@ -190,6 +293,15 @@ class TestCombinators(TestCase):
             'Error on Intersection(Struct{name: String}, Struct{age: Int}): '
             'expected Struct{name: String} or Struct{age: Int} but was str',
             e.args[0])
+
+    def test_intersection_custom_error(self):
+        name_type = c.struct({'name': c.String})
+        age_type = c.struct({'age': c.Int})
+        my_type = c.intersection(name_type, age_type)
+        observer = Mock()
+        ctx = context.create(validation_error_observer=observer)
+        my_type({'name': 'mirko', 'age': '36'}, ctx=ctx)
+        observer.on_error.assert_called_once_with(_ANY_CONTEXT, 'Struct{name: String} or Struct{age: Int}', dict)
 
     def test_intersection_dispatcher(self):
         name_type = c.struct({'name': c.String})
@@ -237,6 +349,14 @@ class TestCombinators(TestCase):
             Enum('V4')
         e = e.exception
         self.assertEqual('Error on Enum(V1: 1, V2: 2, V3: 3): expected V1 or V2 or V3 but was V4', e.args[0])
+
+    def test_enums_custom_error(self):
+        Enum = c.enum({'V1': '1', 'V2': '2', 'V3': '3'})
+
+        observer = Mock()
+        ctx = context.create(validation_error_observer=observer)
+        Enum('V4', ctx=ctx)
+        observer.on_error.assert_called_once_with(_ANY_CONTEXT, 'V1 or V2 or V3', 'V4')
 
     def test_named_enums(self):
         Enum = c.enum({'V1': '1', 'V2': '2', 'V3': '3'}, name='MyEnum')
@@ -350,3 +470,89 @@ class TestCombinators(TestCase):
 
         type1(t)
         self.assertTrue(type1.is_type(t))
+
+    def test_object_custom_error(self):
+        observer = Mock()
+        ctx = context.create(validation_error_observer=observer)
+
+        class TestClass(object):
+            def __init__(self, f1, f2):
+                self.f1 = f1
+                self.f2 = f2
+
+        t = TestClass('hello', 10)
+
+        type1 = generic_object({'f1': Int, 'f2': Int}, TestClass)
+        type1(t, ctx=ctx)
+        observer.on_error.assert_called_once_with(_ANY_CONTEXT, 'Int', str)
+
+    def test_int_production(self):
+        my_int = c.Int('hello', ctx=context.create(production_mode=True))
+        self.assertEqual('hello', my_int)
+
+    def test_struct_production(self):
+        my_struct = c.struct({
+            'a': c.Int, 'b': c.String
+        })
+        base_dict = {'a': 'hello', 'b': 'world'}
+        s = my_struct(base_dict, ctx=context.create(production_mode=True))
+        self.assertEqual(base_dict, s)
+
+    def test_union_production(self):
+        Number = c.union(c.Int, c.Float)
+        self.assertEqual('hello', Number('hello', ctx=context.create(production_mode=True)))
+
+    def test_intersection_production(self):
+        name_type = c.struct({'name': c.String})
+        age_type = c.struct({'age': c.Int})
+        my_type = c.intersection(name_type, age_type)
+
+        base_dict = {'name': 'mirko', 'age': '36'}
+        self.assertEqual(base_dict, my_type(base_dict, ctx=context.create(production_mode=True)))
+
+    def test_subtype_production(self):
+        SmallString = c.subtype(c.String, lambda d: len(d) <= 10)
+        self.assertEqual('12345678901', SmallString('12345678901', ctx=context.create(production_mode=True)))
+
+    def test_enums_production(self):
+        Enum = c.enum({'V1': '1', 'V2': '2', 'V3': '3'})
+        self.assertEqual('V4', Enum('V4', ctx=context.create(production_mode=True)))
+
+    def test_function_production(self):
+        # noinspection PyUnresolvedReferences
+        Fun = c.function(c.String, c.Int, a=c.Float, b=c.enum.of(['X', 'Y', 'Z']))
+        new_f = Fun(lambda: None, ctx=context.create(production_mode=True))
+        new_f()
+
+    def test_object_production(self):
+        class TestClass(object):
+            def __init__(self, f1, f2):
+                self.f1 = f1
+                self.f2 = f2
+        t = TestClass('hello', 10)
+        type1 = generic_object({'f1': Int, 'f2': Int}, TestClass)
+        self.assertEqual(t, type1(t, ctx=context.create(production_mode=True)))
+
+    def test_maybe_production(self):
+        my_maybe = c.maybe(c.String)
+        self.assertEqual(1, my_maybe(1, ctx=context.create(production_mode=True)))
+
+    def test_struct_of_list(self):
+        my_struct = c.struct(
+            {
+                'l': c.list(c.String)
+            }
+        )
+
+        my_struct({'l': ['1', '2', '3']})
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
+            my_struct({'l': ['1', '2', 3]})
+        self.assertEqual(
+            'Error on Struct{l: List(String)}[l][2]: expected String but was int',
+            e.exception.args[0])
+
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
+            my_struct({'w': ['1', '2', '3']})
+        self.assertEqual(
+            'Error on Struct{l: List(String)}[l]: expected List but was NoneType',
+            e.exception.args[0])

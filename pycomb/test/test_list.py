@@ -31,7 +31,7 @@ class TestList(TestCase):
             t.list(self.Point)([1])
 
     def test_should_throw_with_contextual_error_message_wrong_args(self):
-        with util.throws_with_message('Error on ListOfNumbers: missing 1 required positional argument: \'x\''):
+        with util.throws_with_message('Error on ListOfNumbers: expected List but was NoneType'):
             self.ListOfNumbers([])
 
         with util.throws_with_message('Error on ListOfNumbers[0]: expected Int or Float but was str'):
