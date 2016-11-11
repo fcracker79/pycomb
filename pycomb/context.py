@@ -80,11 +80,6 @@ class ValidationContextImpl(ValidationContext):
         return self._production_mode
 
 
-def _assert_msg(guard, msg, ctx):
-    if not guard:
-        raise exceptions.PyCombValidationError(_generate_error_message(ctx, msg=msg))
-
-
 def _generate_error_message(ctx, expected=None, found_type=None, msg=None):
     return 'Error on {}: {}'.format(ctx.path, msg) if msg \
         else 'Error on {}: expected {} but was {}'.format(

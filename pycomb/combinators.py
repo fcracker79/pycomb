@@ -1,5 +1,3 @@
-import sys
-
 from functools import wraps
 
 from pycomb import predicates as p, context
@@ -55,9 +53,10 @@ def list(combinator_element, name=None):
         if new_ctx_list.empty:
             new_ctx_list.append(name)
 
+        assert_type(bool(x), ctx=new_ctx_list, expected='List', found_type=type(None))
         if not x:
-            raise ValueError('Error on {}: missing 1 required positional argument: \'x\''.format(new_ctx_list.path))
-
+            return None
+        
         result = []
         i = 0
 
@@ -100,7 +99,12 @@ def struct(combinators, name=None):
         if ctx.empty:
             ctx.append(name)
 
-        assert_type(_struct.is_type(x) or type(x) is dict, ctx=ctx, expected=name, found_type=type(x))
+        is_type = _struct.is_type(x) or type(x) is dict
+        assert_type(is_type, ctx=ctx, expected=name, found_type=type(x))
+
+        # Cannot proceed, this is not even a struct.
+        if not is_type:
+            return x
 
         if type(x) == p.StructType:
             return x
@@ -156,17 +160,7 @@ def _default_composite_dispatcher(x, combinators):
     return None
 
 
-if sys.version_info < (3, 2):
-    def union(*combinators, **kwargs):
-        return _union_all_versions(*combinators, **kwargs)
-else:
-    def union(*combinators, name=None, dispatcher=None):
-        return _union_all_versions(*combinators, name=name, dispatcher=dispatcher)
-
-
-def _union_all_versions(*combinators, **kwargs):
-    name = kwargs.get('name')
-    dispatcher = kwargs.get('dispatcher')
+def union(*combinators, name=None, dispatcher=None):
     if not name:
         name = 'Union({})'.format(', '.join(map(lambda d: get_type_name(d), combinators)))
 
@@ -197,17 +191,7 @@ def _union_all_versions(*combinators, **kwargs):
     return _union
 
 
-if sys.version_info < (3, 2):
-    def intersection(*combinators, **kwargs):
-        return _intersection_all_versions(*combinators, **kwargs)
-else:
-    def intersection(*combinators, name=None, dispatcher=None):
-        return _intersection_all_versions(*combinators, name=name, dispatcher=dispatcher)
-
-
-def _intersection_all_versions(*combinators, **kwargs):
-    name = kwargs.get('name')
-    dispatcher = kwargs.get('dispatcher')
+def intersection(*combinators, name=None, dispatcher=None):
     if not name:
         name = 'Intersection({})'.format(
             ', '.join(map(lambda d: get_type_name(d), combinators)))
@@ -275,10 +259,14 @@ def enum(values, name=None):
 
         new_ctx.append(name)
 
-        assert_type(_enum.is_type(x), ctx=new_ctx,
-                    expected=' or '.join(sorted_enums),
-                    found_type=str(x))
+        is_type = _enum.is_type(x)
+        assert_type(
+            is_type, ctx=new_ctx,
+            expected=' or '.join(sorted_enums),
+            found_type=str(x))
 
+        if not is_type:
+            return None
         return values[x]
 
     _enum.is_type = lambda d: d in values
@@ -301,11 +289,9 @@ def _typedef(args, kwargs, ctx=None):
     def wrapper(fun):
         @wraps(fun)
         def f(*inner_args, **inner_kwargs):
-            if ctx and ctx.production_mode:
-                return fun(*inner_args, **inner_kwargs)
-
-            assert_type(len(args) == len(inner_args), ctx=ctx, expected='{} arguments'.format(len(args)),
-                        found_type='{} arguments'.format(len(inner_args)))
+            assert_type(
+                len(args) == len(inner_args), ctx=ctx, expected='{} arguments'.format(len(args)),
+                found_type='{} arguments'.format(len(inner_args)))
 
             for i in range(len(args)):
                 args[i](inner_args[i])
