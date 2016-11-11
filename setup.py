@@ -24,10 +24,10 @@ def get_packages(path):
 
 packages = get_packages('pycomb')
 setup(name='pycomb',
-      version='0.0.2',
+      version='0.0.3',
       description='Python combination',
-      url='https://fcracker79@bitbucket.org/fcracker79/pycomb.git',
-      author='Squadrone',
+      url='https://github.com/fcracker79/pycomb',
+      author='fcracker79',
       author_email='fcracker79@gmail.com',
       license='MIT',
       packages=packages,
