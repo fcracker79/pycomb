@@ -1,11 +1,13 @@
-[![Build Status](https://travis-ci.org/fcracker79/pycomb.svg?branch=master)](https://travis-ci.org/fcracker79/pycomb)
-
-PyComb
-======
-
-
-[Tcomb](http://www.github.com/gcanti/tcomb) port for Python 3.
-It provides a means to apply runtime type checking.
+Metadata-Version: 1.0
+Name: pycomb
+Version: 0.1.0
+Summary: It provides a means to apply runtime type checking.
+Home-page: https://github.com/fcracker79/pycomb
+Author: fcracker79
+Author-email: fcracker79@gmail.com
+License: MIT
+Download-URL: https://github.com/fcracker79/pycomb/archive/v0.1.0.zip
+Description: It provides a means to apply runtime type checking.
 
 Installation
 ------------
@@ -110,3 +112,15 @@ More types are supported, such as:
 * ...
 
 Please read the test code to find more examples.
+
+Keywords: type hinting validation combinator
+Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.2
+Classifier: Programming Language :: Python :: 3.3
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Operating System :: OS Independent
