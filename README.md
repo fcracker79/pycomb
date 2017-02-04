@@ -72,6 +72,29 @@ numbers = ListOfNumbers([1, 2, 'hello'], ctx=production_ctx)  # This will NOT fa
 # Expected output:
 # > Expected Int or Float, got <class 'str'>
 
+
+# Constants
+john_data = {'name': 'John'}
+John = combinators.constant(john_data, name='JohnConstant')
+John({'name': 'John'})
+John({'name': 'Jack'})  # Error on JohnConstant: expected JohnConstant but was dict
+
+
+# Regexp with groups
+import re
+def name_condition(d):
+    return d in ('John', 'Jack')
+def age_condition(d):
+    return int(d) > 0
+
+Name = combinators.subtype(combinators.String, name_condition, name='Name')
+Age = combinators.subtype(combinators.String, age_condition, name='Age')
+NameAndAge = combinators.regexp_group('(\w+) +(-?[0-9]+)', Name, Age, name='NameAndAge')
+NameAndAge('John 32')  # Ok
+NameAndAge('John 3x')  # Error on NameAndAge: expected NameAndAge but was str
+NameAndAge('John -32')  # Error on NameAndAge[1]: expected Age but was str
+NameAndAge('WRONG 32')  # Error on NameAndAge[0]: expected Name but was str
+
 ```
 
 Decorators
