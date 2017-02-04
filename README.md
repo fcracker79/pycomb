@@ -1,4 +1,4 @@
-![Build status] (https://api.travis-ci.org/fcracker79/pycomb.svg?branch=master)
+[![build status](https://img.shields.io/travis/fcracker79/pycomb/master.svg?style=flat-square)](https://travis-ci.org/fcracker79/pycomb)
 
 PyComb
 ======
