@@ -1,3 +1,5 @@
+![Build status] (https://api.travis-ci.org/fcracker79/pycomb.svg?branch=master)
+
 PyComb
 ======
 
