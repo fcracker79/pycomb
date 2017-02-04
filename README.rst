@@ -36,24 +36,9 @@ Basic examples
     my_user3 = User({'name': 'John Burns', 'age': 30, 'city': 'New York'})  # This IS a dict
 
     # Subtypes
-    SmallString = combinators.subtype(c.String, lambda d: len(d) <= 10)  # Strings shorter than 11 characters
+    SmallString = c.subtype(c.String, lambda d: len(d) <= 10)  # Strings shorter than 11 characters
     SmallString('12345678901')  # This will fail
     SmallString('12345')  # This IS a 'str' object
-
-    # Regexp with groups
-    import re
-    def name_condition(d):
-        return d in ('John', 'Jack')
-    def age_condition(d):
-        return int(d) > 0
-
-    Name = c.subtype(c.String, name_condition, name='Name')
-    Age = c.subtype(c.String, age_condition, name='Age')
-    NameAndAge = c.regexp_group('(\w+) +(-?[0-9]+)', Name, Age, name='NameAndAge')
-    NameAndAge('John 32')  # Ok
-    NameAndAge('John 3x')  # Error on NameAndAge: expected NameAndAge but was str
-    NameAndAge('John -32')  # Error on NameAndAge[1]: expected Age but was str
-    NameAndAge('WRONG 32')  # Error on NameAndAge[0]: expected Name but was str
 
 Validation context
 ------------------

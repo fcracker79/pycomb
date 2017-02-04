@@ -636,3 +636,23 @@ class TestCombinators(TestCase):
         if suberror:
             name_condition.assert_called_once_with(value.split(' ')[0])
             valid_name and age_condition.assert_called_once_with(value.split(' ')[1])
+
+    def test_constant(self):
+        John = c.constant(
+            {
+                'name': 'John', 'surname': 'Burns'
+            },
+            name='JohnConstant')
+        John({
+            'name': 'John', 'surname': 'Burns'
+        })
+
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
+            John(
+                {
+                    'name': 'Jack', 'surname': 'Burns'
+                }
+            )
+        self.assertEqual(
+            'Error on JohnConstant: expected JohnConstant but was dict',
+            e.exception.args[0])

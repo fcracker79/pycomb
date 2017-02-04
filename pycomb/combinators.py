@@ -41,6 +41,10 @@ Float = irreducible(p.is_float, name='Float')
 String = irreducible(p.is_string, name='String')
 
 
+def constant(value, name=None):
+    return irreducible(lambda d: d == value, name=name)
+
+
 # noinspection PyShadowingBuiltins
 def list(combinator_element, name=None):
     if not name:
@@ -428,4 +432,3 @@ def regexp_group(pattern: str, *combinators, name=None):
         'name': name
     }
     return _regexp_group
-
