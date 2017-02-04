@@ -1,3 +1,4 @@
+import re
 from functools import wraps
 
 from pycomb import predicates as p, context
@@ -231,7 +232,8 @@ def subtype(combinator, condition, name=None):
         if new_ctx.production_mode:
             return x
 
-        new_ctx.append(name)
+        if new_ctx.empty:
+            new_ctx.append(name)
         assert_type(_subtype.is_type(x), ctx=new_ctx, expected=name, found_type=type(x))
 
         return combinator(x, new_ctx)
@@ -372,3 +374,58 @@ def generic_object(fields_combinators: dict, object_type):
     }
 
     return _object
+
+
+def regexp_group(pattern: str, *combinators, name=None):
+    name = name or 'RegexpGroup({})'.format(pattern)
+    pattern = '^' + pattern if pattern[0] != '^' else pattern
+    pattern = pattern + '$' if pattern[-1] != '$' else pattern
+
+    def _regexp_group(value, ctx=None):
+        new_ctx = context.create(ctx)
+        if new_ctx.production_mode:
+            return value
+
+        if new_ctx.empty:
+            new_ctx.append(name)
+
+        if not isinstance(value, str):
+            assert_type(False, ctx=new_ctx, expected=name, found_type=type(value))
+        matcher = re.match(pattern, value)
+        if not matcher:
+            assert_type(False, ctx=new_ctx, expected=name, found_type=type(value))
+        groups = matcher.groups()
+        if len(groups) != len(combinators):
+            assert_type(False, ctx=new_ctx, expected=name, found_type=type(value))
+
+        idx = 0
+        for x in zip(combinators, groups):
+            sub_ctx = context.create(new_ctx)
+            sub_ctx.append('[{}]'.format(idx), separator='')
+            combinator = x[0]
+            group = x[1]
+            combinator(group, ctx=sub_ctx)
+            idx += 1
+        return value
+
+    def _is_type(d):
+        if not isinstance(d, str):
+            return False
+        matcher = re.match(pattern, d)
+        if not matcher:
+            return False
+        groups = matcher.groups()
+        if len(groups) != len(combinators):
+            return False
+
+        return all(
+            (x[0].is_type(x[1]) for x in zip(combinators, groups))
+        )
+
+    _regexp_group.is_type = _is_type
+
+    _regexp_group.meta = {
+        'name': name
+    }
+    return _regexp_group
+
