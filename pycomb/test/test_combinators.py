@@ -556,3 +556,83 @@ class TestCombinators(TestCase):
         self.assertEqual(
             'Error on Struct{l: List(String)}[l]: expected List but was NoneType',
             e.exception.args[0])
+
+    def test_regexp(self):
+        self._test_regexp('John 32', True, True, '')
+
+    def test_regexp_error_name(self):
+        self._test_regexp(
+            'John 32', False, True,
+            'Error on RegexpGroup((\w+) +([0-9]+))[0]: expected Name but was str')
+
+    def test_regexp_error_age(self):
+        self._test_regexp(
+            'John 32', True, False,
+            'Error on RegexpGroup((\w+) +([0-9]+))[1]: expected Age but was str')
+
+    def test_regexp_error(self):
+        self._test_regexp(
+            'John32', True, True,
+            'Error on RegexpGroup((\w+) +([0-9]+)): expected RegexpGroup((\w+) +([0-9]+)) but was str',
+            suberror=False)
+
+    def _test_regexp(self, value, valid_name: bool, valid_age: bool, exp_msg: str, suberror: bool=True):
+        name_condition = mock.Mock()
+        name_condition.return_value = valid_name
+        age_condition = mock.Mock()
+        age_condition.return_value = valid_age
+        name = c.subtype(c.String, name_condition, name='Name')
+        age = c.subtype(c.String, age_condition, name='Age')
+        name_age = c.regexp_group('(\w+) +([0-9]+)', name, age)
+        if not exp_msg:
+            name_age(value)
+        else:
+            with self.assertRaises(exceptions.PyCombValidationError) as e:
+                name_age(value)
+            self.assertEqual(
+                exp_msg, e.exception.args[0],
+                msg='Got {}'.format(e.exception.args[0]))
+
+        if suberror:
+            name_condition.assert_called_once_with(value.split(' ')[0])
+            valid_name and age_condition.assert_called_once_with(value.split(' ')[1])
+
+    def test_regexp_named_comb(self):
+        self._test_regexp_named_comb('John 32', True, True, '')
+
+    def test_regexp_error_name_named_comb(self):
+        self._test_regexp_named_comb(
+            'John 32', False, True,
+            'Error on NameAgeType[0]: expected Name but was str')
+
+    def test_regexp_error_age_named_comb(self):
+        self._test_regexp_named_comb(
+            'John 32', True, False,
+            'Error on NameAgeType[1]: expected Age but was str')
+
+    def test_regexp_error_named_comb(self):
+        self._test_regexp_named_comb(
+            'John32', True, True,
+            'Error on NameAgeType: expected NameAgeType but was str',
+            suberror=False)
+
+    def _test_regexp_named_comb(self, value, valid_name: bool, valid_age: bool, exp_msg: str, suberror: bool = True):
+        name_condition = mock.Mock()
+        name_condition.return_value = valid_name
+        age_condition = mock.Mock()
+        age_condition.return_value = valid_age
+        name = c.subtype(c.String, name_condition, name='Name')
+        age = c.subtype(c.String, age_condition, name='Age')
+        name_age = c.regexp_group('(\w+) +([0-9]+)', name, age, name='NameAgeType')
+        if not exp_msg:
+            name_age(value)
+        else:
+            with self.assertRaises(exceptions.PyCombValidationError) as e:
+                name_age(value)
+            self.assertEqual(
+                exp_msg, e.exception.args[0],
+                msg='Got {}'.format(e.exception.args[0]))
+
+        if suberror:
+            name_condition.assert_called_once_with(value.split(' ')[0])
+            valid_name and age_condition.assert_called_once_with(value.split(' ')[1])
