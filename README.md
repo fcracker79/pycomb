@@ -44,7 +44,9 @@ my_user2 = User({'name': 'John Burns', 'age': '30'})  # This will fail
 my_user3 = User({'name': 'John Burns', 'age': 30, 'city': 'New York'})  # This IS a dict
 
 # Subtypes
-SmallString = combinators.subtype(combinators.String, lambda d: len(d) <= 10)  # Strings shorter than 11 characters
+SmallString = combinators.subtype(
+    combinators.String, 
+    lambda d: len(d) <= 10)  # Strings shorter than 11 characters
 SmallString('12345678901')  # This will fail
 SmallString('12345')  # This IS a 'str' object
 
