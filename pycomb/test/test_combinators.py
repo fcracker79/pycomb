@@ -486,6 +486,23 @@ class TestCombinators(TestCase):
         type1(t, ctx=ctx)
         observer.on_error.assert_called_once_with(_ANY_CONTEXT, 'Int', str)
 
+    def test_object_with_custom_name(self):
+        class TestClass(object):
+            def __init__(self, f1, f2):
+                self.f1 = f1
+                self.f2 = f2
+
+        t = TestClass('hello', 10)
+
+        type1 = generic_object({'f1': Int, 'f2': Int}, TestClass, name='MyTestClass')
+
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
+            type1(t)
+        e = e.exception
+        self.assertEqual(
+            'Error on MyTestClass.f1: expected Int but was str',
+            e.args[0])
+
     def test_int_production(self):
         my_int = c.Int('hello', ctx=context.create(production_mode=True))
         self.assertEqual('hello', my_int)
@@ -656,3 +673,29 @@ class TestCombinators(TestCase):
         self.assertEqual(
             'Error on JohnConstant: expected JohnConstant but was dict',
             e.exception.args[0])
+
+        John = c.constant(
+            {
+                'name': 'John'
+            })
+        John({
+            'name': 'John'
+        })
+
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
+            John(
+                {
+                    'name': 'Jack'
+                }
+            )
+        self.assertEqual(
+            'Error on Constant({\'name\': \'John\'}): expected Constant({\'name\': \'John\'}) but was dict',
+            e.exception.args[0])
+
+    def test_bool(self):
+        c.Boolean(True)
+        c.Boolean(False)
+
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
+            c.Boolean(32)
+        self.assertEqual('Error on Boolean: expected Boolean but was int', e.exception.args[0])
