@@ -10,6 +10,10 @@ def is_string(x):
     return type(x) == str
 
 
+def is_bool(x):
+    return type(x) == bool
+
+
 def is_list_of(d, combinator_element):
     return type(d) in (list, tuple) and all(combinator_element.is_type(element) for element in d)
 

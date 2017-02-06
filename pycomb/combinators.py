@@ -39,10 +39,11 @@ def irreducible(predicate, name='Irreducible'):
 Int = irreducible(p.is_int, name='Int')
 Float = irreducible(p.is_float, name='Float')
 String = irreducible(p.is_string, name='String')
+Boolean = irreducible(p.is_bool, name='Boolean')
 
 
 def constant(value, name=None):
-    return irreducible(lambda d: d == value, name=name)
+    return irreducible(lambda d: d == value, name=name or 'Constant({})'.format(value))
 
 
 # noinspection PyShadowingBuiltins
@@ -347,8 +348,8 @@ def function(*args, **kwargs):
 Number = union(Int, Float, name='Number')
 
 
-def generic_object(fields_combinators: dict, object_type):
-    name = object_type.__name__
+def generic_object(fields_combinators: dict, object_type, name=None):
+    name = name or object_type.__name__
 
     def _object(x, ctx=None):
         new_ctx = context.create(ctx)
