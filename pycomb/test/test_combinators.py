@@ -87,7 +87,7 @@ class TestCombinators(TestCase):
         self.assertIsNone(
             c.list(c.String)(None, ctx=ctx)
         )
-        observer.on_error.assert_called_once_with(_ANY_CONTEXT, 'List', type(None))
+        observer.on_error.assert_called_once_with(_ANY_CONTEXT, 'List(String)', type(None))
 
     def test_list_production(self):
         self.assertEqual(
@@ -154,7 +154,7 @@ class TestCombinators(TestCase):
         self.assertEqual(1, len(call))
         call = call[0]
         self.assertTrue(
-            call == mock.call(_ANY_CONTEXT, 'Struct{value: Int, name: String}', str) or \
+            call == mock.call(_ANY_CONTEXT, 'Struct{value: Int, name: String}', str) or
             call == mock.call(_ANY_CONTEXT, 'Struct{name: String, value: Int}', str),
             msg=str(call)
         )
@@ -571,7 +571,7 @@ class TestCombinators(TestCase):
         with self.assertRaises(exceptions.PyCombValidationError) as e:
             my_struct({'w': ['1', '2', '3']})
         self.assertEqual(
-            'Error on Struct{l: List(String)}[l]: expected List but was NoneType',
+            'Error on Struct{l: List(String)}[l]: expected List(String) but was NoneType',
             e.exception.args[0])
 
     def test_regexp(self):
@@ -603,16 +603,19 @@ class TestCombinators(TestCase):
         name_age = c.regexp_group('(\w+) +([0-9]+)', name, age)
         if not exp_msg:
             name_age(value)
+            self.assertTrue(name_age.is_type(value))
         else:
             with self.assertRaises(exceptions.PyCombValidationError) as e:
                 name_age(value)
             self.assertEqual(
                 exp_msg, e.exception.args[0],
                 msg='Got {}'.format(e.exception.args[0]))
+            self.assertFalse(name_age.is_type(value))
 
         if suberror:
-            name_condition.assert_called_once_with(value.split(' ')[0])
-            valid_name and age_condition.assert_called_once_with(value.split(' ')[1])
+            name_value, age_value = value.split(' ')
+            name_condition.assert_has_calls([mock.call(name_value), mock.call(name_value)])
+            valid_name and age_condition.assert_has_calls([mock.call(age_value), mock.call(age_value)])
 
     def test_regexp_named_comb(self):
         self._test_regexp_named_comb('John 32', True, True, '')
@@ -633,7 +636,27 @@ class TestCombinators(TestCase):
             'Error on NameAgeType: expected NameAgeType but was str',
             suberror=False)
 
-    def _test_regexp_named_comb(self, value, valid_name: bool, valid_age: bool, exp_msg: str, suberror: bool = True):
+    def test_regexp_named_comb_prod(self):
+        self._test_regexp_named_comb('John 32', True, True, '', production_mode=True)
+
+    def test_regexp_error_name_named_comb_prod(self):
+        self._test_regexp_named_comb(
+            'John 32', False, True, '', production_mode=True)
+
+    def test_regexp_error_age_named_comb_prod(self):
+        self._test_regexp_named_comb(
+            'John 32', True, False,
+            '', production_mode=True)
+
+    def test_regexp_error_named_comb_prod(self):
+        self._test_regexp_named_comb(
+            'John32', True, True,
+            '', production_mode=True,
+            suberror=False)
+
+    def _test_regexp_named_comb(self, value, valid_name: bool, valid_age: bool, exp_msg: str,
+                                suberror: bool = True, production_mode: bool = False):
+        ctx = context.create(production_mode=production_mode)
         name_condition = mock.Mock()
         name_condition.return_value = valid_name
         age_condition = mock.Mock()
@@ -641,18 +664,37 @@ class TestCombinators(TestCase):
         name = c.subtype(c.String, name_condition, name='Name')
         age = c.subtype(c.String, age_condition, name='Age')
         name_age = c.regexp_group('(\w+) +([0-9]+)', name, age, name='NameAgeType')
-        if not exp_msg:
-            name_age(value)
+        if not exp_msg or production_mode:
+            name_age(value, ctx=ctx)
         else:
             with self.assertRaises(exceptions.PyCombValidationError) as e:
-                name_age(value)
+                name_age(value, ctx=ctx)
             self.assertEqual(
                 exp_msg, e.exception.args[0],
                 msg='Got {}'.format(e.exception.args[0]))
 
-        if suberror:
+        if suberror and not production_mode:
             name_condition.assert_called_once_with(value.split(' ')[0])
             valid_name and age_condition.assert_called_once_with(value.split(' ')[1])
+        else:
+            self.assertEqual(0, name_condition.call_count)
+            self.assertEqual(0, age_condition.call_count)
+
+    def test_regexp_wrong_object(self):
+        with self.assertRaises(ValueError):
+            # noinspection PyTypeChecker
+            c.regexp_group({}, c.Number, c.Number)
+
+        with self.assertRaises(ValueError):
+            # noinspection PyTypeChecker
+            c.regexp_group('(\w+) (\w+) (\w+)', c.Number, c.Number)
+
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
+            c.regexp_group('(\w+) +([0-9]+)', c.String, c.String)(32)
+        self.assertEqual(
+            'Error on RegexpGroup((\w+) +([0-9]+)): expected RegexpGroup((\w+) +([0-9]+)) but was int',
+            e.exception.args[0])
+        self.assertFalse(c.regexp_group('(\w+) +([0-9]+)', c.String, c.String).is_type(32))
 
     def test_constant(self):
         John = c.constant(

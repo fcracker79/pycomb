@@ -31,9 +31,6 @@ class TestList(TestCase):
             t.list(self.Point)([1])
 
     def test_should_throw_with_contextual_error_message_wrong_args(self):
-        with util.throws_with_message('Error on ListOfNumbers: expected List but was NoneType'):
-            self.ListOfNumbers([])
-
         with util.throws_with_message('Error on ListOfNumbers[0]: expected Int or Float but was str'):
             self.ListOfNumbers('a')
 
@@ -87,3 +84,13 @@ class TestList(TestCase):
 
     def test_list_predicate_used_as_predicate(self):
         self.assertTrue(self.PathOfPoint.is_type([self.p1, self.p2]))
+
+    def test_empty_list(self):
+        self.PathOfPoint([])
+        with util.throws_with_message(
+                'Error on List(Struct{x: Number, y: Number}): '
+                'expected List(Struct{x: Number, y: Number}) but was NoneType',
+                'Error on List(Struct{y: Number, x: Number}): '
+                'expected List(Struct{y: Number, x: Number}) but was NoneType'
+        ):
+            self.PathOfPoint(None)

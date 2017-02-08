@@ -59,7 +59,7 @@ def list(combinator_element, name=None):
         if new_ctx_list.empty:
             new_ctx_list.append(name)
 
-        assert_type(bool(x), ctx=new_ctx_list, expected='List', found_type=type(None))
+        assert_type(x is not None, ctx=new_ctx_list, expected=name, found_type=type(None))
         if not x:
             return None
         
@@ -383,8 +383,14 @@ def generic_object(fields_combinators: dict, object_type, name=None):
 
 def regexp_group(pattern: str, *combinators, name=None):
     name = name or 'RegexpGroup({})'.format(pattern)
+    if not pattern or not isinstance(pattern, str):
+        raise ValueError
+
     pattern = '^' + pattern if pattern[0] != '^' else pattern
     pattern = pattern + '$' if pattern[-1] != '$' else pattern
+    pattern = re.compile(pattern)
+    if pattern.groups != len(combinators):
+        raise ValueError
 
     def _regexp_group(value, ctx=None):
         new_ctx = context.create(ctx)
@@ -396,15 +402,11 @@ def regexp_group(pattern: str, *combinators, name=None):
 
         if not isinstance(value, str):
             assert_type(False, ctx=new_ctx, expected=name, found_type=type(value))
-        matcher = re.match(pattern, value)
+        matcher = pattern.match(value)
         if not matcher:
             assert_type(False, ctx=new_ctx, expected=name, found_type=type(value))
-        groups = matcher.groups()
-        if len(groups) != len(combinators):
-            assert_type(False, ctx=new_ctx, expected=name, found_type=type(value))
-
         idx = 0
-        for x in zip(combinators, groups):
+        for x in zip(combinators, matcher.groups()):
             sub_ctx = context.create(new_ctx)
             sub_ctx.append('[{}]'.format(idx), separator='')
             combinator = x[0]
@@ -416,12 +418,10 @@ def regexp_group(pattern: str, *combinators, name=None):
     def _is_type(d):
         if not isinstance(d, str):
             return False
-        matcher = re.match(pattern, d)
+        matcher = pattern.match(d)
         if not matcher:
             return False
         groups = matcher.groups()
-        if len(groups) != len(combinators):
-            return False
 
         return all(
             (x[0].is_type(x[1]) for x in zip(combinators, groups))
