@@ -174,6 +174,14 @@ class TestCombinators(TestCase):
 
         self.assertEqual(StructType, type(r))
 
+    def test_maybe_with_name(self):
+        r = c.maybe(c.subtype(c.String, lambda d: bool(d), name='Nice String'), name='MyType')
+        r('Hello')
+        r(None)
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
+            r(1)
+        self.assertEqual('Error on MyType: expected None or Nice String but was int', e.exception.args[0])
+
     def test_struct_of_struct(self):
         r = c.struct({'name': c.String, 'data': c.struct({'age': c.Int})})({'name': 'Mirko', 'data': {'age': 36}})
 
