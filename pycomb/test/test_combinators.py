@@ -749,3 +749,24 @@ class TestCombinators(TestCase):
         with self.assertRaises(exceptions.PyCombValidationError) as e:
             c.Boolean(32)
         self.assertEqual('Error on Boolean: expected Boolean but was int', e.exception.args[0])
+
+    def test_generic_object_with_fields_errors(self):
+        class MyType:
+            def __init__(self, f1, f2):
+                self.f1, self.f2 = f1, f2
+
+        r2 = c.generic_object(
+            {'f1': c.String, 'f2': c.String},
+            MyType,
+            name='MySubType'
+        )
+
+        r = c.generic_object(
+            {'f1': r2, 'f2': c.Int},
+            MyType,
+            name='MyType'
+        )
+
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
+            r(MyType(MyType('1', 2), 2))
+        self.assertEqual('Error on MyType.f1.f2: expected String but was int', e.exception.args[0])
