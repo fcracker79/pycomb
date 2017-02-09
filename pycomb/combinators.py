@@ -356,7 +356,8 @@ def generic_object(fields_combinators: dict, object_type, name=None):
         if new_ctx.production_mode:
             return x
 
-        new_ctx.append(name)
+        if new_ctx.empty:
+            new_ctx.append(name)
 
         assert_type(type(x) == object_type, ctx=new_ctx, expected=name, found_type=type(x))
 
