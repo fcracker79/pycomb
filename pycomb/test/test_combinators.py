@@ -130,7 +130,7 @@ class TestCombinators(TestCase):
             c.struct(d)('hello')
 
         with self.assertRaises(exceptions.PyCombValidationError) as e:
-            c.struct(d)({'name': 0, 'value': 1})
+            c.struct(d)({'name': 0, 'value': 1, 'extra': 3})
 
         e = e.exception
         self.assertTrue(
@@ -144,6 +144,41 @@ class TestCombinators(TestCase):
 
         with(self.assertRaises(TypeError)):
             result.name = 'anotherName'
+
+    def test_strict_struct(self):
+        d = c.struct({'name': c.String}, strict=True)
+
+        with(self.assertRaises(exceptions.PyCombValidationError)):
+            d('hello')
+
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
+            d({'name': 0})
+
+        self.assertEqual(
+            'Error on StrictStruct{name: String}[name]: expected String but was int',
+            e.exception.args[0])
+
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
+            d({'name': 'John', 'age': 30})
+        self.assertEqual(
+            'Error on StrictStruct{name: String}: expected StrictStruct{name: String} but was dict',
+            e.exception.args[0])
+
+    def test_strict_struct_maybe(self):
+        d = c.struct({'name': c.String, 'age': c.maybe(c.Int)}, strict=True)
+
+        d({'name': 'John', 'age': 30})
+        d({'name': 'John'})
+
+    def test_strict_struct_union(self):
+        u = c.union(
+            c.struct({1: c.constant(True)}, strict=True),
+            c.struct({1: c.constant(False), 2: c.String}, strict=True))
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
+            u({1: True, 2: False})
+        self.assertEqual(
+            'Error on Union(StrictStruct{1: Constant(True)}, StrictStruct{1: Constant(False), 2: String}): expected StrictStruct{1: Constant(True)} or StrictStruct{1: Constant(False), 2: String} but was dict',
+            e.exception.args[0])
 
     def test_struct_custom_error(self):
         observer = Mock()

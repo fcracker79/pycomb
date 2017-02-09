@@ -92,10 +92,13 @@ def list(combinator_element, name=None):
     return _list
 
 
-def struct(combinators, name=None):
+def struct(combinators, name: str=None, strict: bool=False):
     if not name:
-        name = 'Struct{{{}}}'.format(''.join(
+        base_name = strict and 'StrictStruct' or 'Struct'
+        name = '{}{{{}}}'.format(base_name, ''.join(
             ', '.join(map(lambda k: '{}: {}'.format(k, get_type_name(combinators[k])), combinators))))
+        if strict:
+            name = '{}'.format(name)
 
     def _struct(x, ctx=None):
         ctx = context.create(ctx)
@@ -105,7 +108,7 @@ def struct(combinators, name=None):
         if ctx.empty:
             ctx.append(name)
 
-        is_type = _struct.is_type(x) or type(x) is dict
+        is_type = _struct.is_type(x) or (type(x) is dict and (not strict or all(k in combinators for k in x.keys())))
         assert_type(is_type, ctx=ctx, expected=name, found_type=type(x))
 
         # Cannot proceed, this is not even a struct.
@@ -123,8 +126,9 @@ def struct(combinators, name=None):
         return p.StructType(new_dict)
 
     def _is_type(d):
-        return p.is_struct_of(d, combinators) or \
+        result = p.is_struct_of(d, combinators) or \
                                type(d) == dict and all(combinators[k].is_type(d.get(k)) for k in combinators)
+        return result and (not strict or all(k in combinators for k in d.keys()))
 
     _struct.is_type = _is_type
 
