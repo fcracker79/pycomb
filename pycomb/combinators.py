@@ -243,7 +243,8 @@ def subtype(combinator, condition, name=None):
 
         if new_ctx.empty:
             new_ctx.append(name)
-        assert_type(_subtype.is_type(x), ctx=new_ctx, expected=name, found_type=type(x))
+        combinator(x, new_ctx)
+        assert_type(condition(x), ctx=new_ctx, expected=name, found_type=type(x))
 
         return combinator(x, new_ctx)
 

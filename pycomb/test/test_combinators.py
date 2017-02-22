@@ -805,3 +805,14 @@ class TestCombinators(TestCase):
         with self.assertRaises(exceptions.PyCombValidationError) as e:
             r(MyType(MyType('1', 2), 2))
         self.assertEqual('Error on MyType.f1.f2: expected String but was int', e.exception.args[0])
+
+    def test_subtype_should_give_error_based_on_supertype(self):
+        data = {'a': 1, 'b': 2, 'c': {'d': 'hello', 'e': 32}}
+        MyType = c.subtype(
+            c.struct({'a': c.Int, 'b': c.Int, 'c': c.subtype(c.struct({'d': c.String, 'e': c.String}), lambda: True)}),
+            lambda: True,
+            name='MyType'
+        )
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
+            MyType(data)
+        self.assertEqual('Error on MyType[c][e]: expected String but was int', e.exception.args[0])
