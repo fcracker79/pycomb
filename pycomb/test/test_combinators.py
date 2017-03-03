@@ -816,3 +816,28 @@ class TestCombinators(TestCase):
         with self.assertRaises(exceptions.PyCombValidationError) as e:
             MyType(data)
         self.assertEqual('Error on MyType[c][e]: expected String but was int', e.exception.args[0])
+
+    def test_nested_enum(self):
+        s = c.struct({'gender': c.enum({'1': 'Male', '2': 'Female'}, name='Gender')}, name='MyType')
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
+            s({'gender': '3'})
+        self.assertEqual('Error on MyType[gender]: expected 1 or 2 but was 3', e.exception.args[0])
+
+    def test_nested_generic_object(self):
+        class Outer:
+            def __init__(self, f):
+                self.f = f
+
+        class Inner:
+            def __init__(self, g):
+                self.g = g
+
+        s = c.generic_object({'f': c.generic_object({'g': c.Int}, Inner, name='Inner')}, Outer, name='Outer')
+
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
+            s(Outer(Inner('hello')))
+        self.assertEqual('Error on Outer.f.g: expected Int but was str', e.exception.args[0])
+
+        with self.assertRaises(exceptions.PyCombValidationError) as e:
+            s(Outer('hello'))
+        self.assertEqual('Error on Outer.f: expected Inner but was str', e.exception.args[0])

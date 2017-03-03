@@ -269,7 +269,8 @@ def enum(values, name=None):
         if new_ctx.production_mode:
             return x
 
-        new_ctx.append(name)
+        if new_ctx.empty:
+            new_ctx.append(name)
 
         is_type = _enum.is_type(x)
         assert_type(

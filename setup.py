@@ -24,7 +24,7 @@ def get_packages(path):
 
 packages = get_packages('pycomb')
 setup(name='pycomb',
-      version='0.1.11',
+      version='0.1.12',
       description='Python combination',
       url='https://github.com/fcracker79/pycomb',
       author='fcracker79',
