@@ -145,4 +145,5 @@ More types are supported, such as:
 * Enums
 * ...
 
+All the base types have a default example field.
 Please read the test code to find more examples.

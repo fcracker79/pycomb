@@ -1,6 +1,7 @@
 import re
 from functools import wraps
 
+from pycomb import examples
 from pycomb import predicates as p, context
 
 _orig_list = list
@@ -15,7 +16,7 @@ def assert_type(guard, ctx, expected=None, found_type=None):
         ctx.notify_error(expected, found_type)
 
 
-def irreducible(predicate, name='Irreducible'):
+def irreducible(predicate, example, name='Irreducible'):
     def _irreducible(value, ctx=None):
         new_ctx = context.create(ctx)
         if new_ctx.production_mode:
@@ -33,17 +34,20 @@ def irreducible(predicate, name='Irreducible'):
     _irreducible.meta = {
         'name': name
     }
+
+    _irreducible.example = example
+
     return _irreducible
 
 
-Int = irreducible(p.is_int, name='Int')
-Float = irreducible(p.is_float, name='Float')
-String = irreducible(p.is_string, name='String')
-Boolean = irreducible(p.is_bool, name='Boolean')
+Int = irreducible(p.is_int, examples.Int, name='Int')
+Float = irreducible(p.is_float, examples.Float, name='Float')
+String = irreducible(p.is_string, examples.String, name='String')
+Boolean = irreducible(p.is_bool, True, name='Boolean')
 
 
 def constant(value, name=None):
-    return irreducible(lambda d: d == value, name=name or 'Constant({})'.format(value))
+    return irreducible(lambda d: d == value, value, name=name or 'Constant({})'.format(value))
 
 
 # noinspection PyShadowingBuiltins
@@ -89,6 +93,7 @@ def list(combinator_element, name=None):
     _list.meta = {
         'name': name
     }
+    _list.example = [combinator_element.example for _ in range(examples.ListSize)]
     return _list
 
 
@@ -135,6 +140,7 @@ def struct(combinators, name: str=None, strict: bool=False):
     _struct.meta = {
         'name': name
     }
+    _struct.example = {x: v.example for x, v in combinators.items()}
     return _struct
 
 
@@ -159,6 +165,7 @@ def maybe(combinator, name=None):
     _maybe.meta = {
         'name': name
     }
+    _maybe.example = combinator.example
     return _maybe
 
 
@@ -198,10 +205,16 @@ def union(*combinators, name=None, dispatcher=None):
         'name': name
     }
 
+    _union.example = None
+    for x in combinators:
+        if x.example is not None:
+            _union.example = x.example
+            break
+
     return _union
 
 
-def intersection(*combinators, name=None, dispatcher=None):
+def intersection(*combinators, example=None, name=None, dispatcher=None):
     if not name:
         name = 'Intersection({})'.format(
             ', '.join(map(lambda d: get_type_name(d), combinators)))
@@ -228,11 +241,12 @@ def intersection(*combinators, name=None, dispatcher=None):
         'name': name
     }
     _intersection.is_type = lambda d: all(combinator.is_type(d) for combinator in combinators)
+    _intersection.example = example
 
     return _intersection
 
 
-def subtype(combinator, condition, name=None):
+def subtype(combinator, condition, example=None, name=None):
     if not name:
         name = 'Subtype({})'.format(get_type_name(combinator))
 
@@ -253,6 +267,7 @@ def subtype(combinator, condition, name=None):
     _subtype.meta = {
         'name': name
     }
+    _subtype.example = example or combinator.example
 
     return _subtype
 
@@ -292,7 +307,7 @@ def enum(values, name=None):
     enum_dict.update(_enum.__dict__)
     enum_dict.update(values)
     _enum.__dict__ = enum_dict
-
+    _enum.example = _orig_list(values.keys())[0]
     return _enum
 
 enum.of = lambda l, name=None: enum({k: k for k in l}, name=name)
@@ -348,13 +363,14 @@ def function(*args, **kwargs):
         'args': args,
         'kwargs': kwargs
     }
-
+    # TODO I should declare a function based on the combinators.
+    _function.example = lambda *a, **kw: None
     return _function
 
 Number = union(Int, Float, name='Number')
 
 
-def generic_object(fields_combinators: dict, object_type, name=None):
+def generic_object(fields_combinators: dict, object_type, example=None, name=None):
     name = name or object_type.__name__
 
     def _object(x, ctx=None):
@@ -379,8 +395,18 @@ def generic_object(fields_combinators: dict, object_type, name=None):
     def _is_type(d):
         return type(d) == object_type and \
                                all(fields_combinators[k].is_type(getattr(d, k)) for k in fields_combinators)
-    _object.is_type = _is_type
 
+    def _build_example():
+        try:
+            result = object_type()
+            for field_name, field_combinator in fields_combinators.items():
+                setattr(result, field_name, field_combinator.example)
+        except:
+            result = None
+        return result
+
+    _object.is_type = _is_type
+    _object.example = example or _build_example()
     _object.meta = {
         'name': name
     }
@@ -388,7 +414,7 @@ def generic_object(fields_combinators: dict, object_type, name=None):
     return _object
 
 
-def regexp_group(pattern: str, *combinators, name=None):
+def regexp_group(pattern: str, *combinators, example=None, name=None):
     name = name or 'RegexpGroup({})'.format(pattern)
     if not pattern or not isinstance(pattern, str):
         raise ValueError
@@ -439,4 +465,5 @@ def regexp_group(pattern: str, *combinators, name=None):
     _regexp_group.meta = {
         'name': name
     }
+    _regexp_group.example = example
     return _regexp_group
