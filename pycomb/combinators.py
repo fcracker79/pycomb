@@ -97,6 +97,57 @@ def list(combinator_element, name=None):
     return _list
 
 
+# noinspection PyShadowingBuiltins
+def sequence(combinator_element, name=None):
+    if not name:
+        name = 'Sequence({})'.format(get_type_name(combinator_element))
+
+    def _sequence(x, ctx=None):
+        new_ctx_sequence = context.create(ctx)
+        if new_ctx_sequence.production_mode:
+            return x
+
+        if new_ctx_sequence.empty:
+            new_ctx_sequence.append(name)
+
+        assert_type(x is not None, ctx=new_ctx_sequence, expected=name, found_type=type(None))
+        if not x:
+            return None
+
+        assert_type(
+            hasattr(x, '__getitem__') and hasattr(x, '__len__'),
+            ctx=new_ctx_sequence, expected=name, found_type=type(x))
+
+        result = []
+        i = 0
+
+        for d in x:
+            new_ctx = context.create(new_ctx_sequence)
+            new_ctx.append('[{}]'.format(i), separator='')
+
+            result.append(combinator_element(d, ctx=new_ctx))
+            i += 1
+
+        return tuple(result)
+
+    def _is_type(d):
+        if not hasattr(d, '__getitem__') or not hasattr(d, '__len__'):
+            return False
+
+        for x in d:
+            if not combinator_element.is_type(x):
+                return False
+
+        return True
+
+    _sequence.is_type = _is_type
+    _sequence.meta = {
+        'name': name
+    }
+    _sequence.example = [combinator_element.example for _ in range(examples.ListSize)]
+    return _sequence
+
+
 def struct(combinators, name: str=None, strict: bool=False):
     if not name:
         base_name = strict and 'StrictStruct' or 'Struct'
