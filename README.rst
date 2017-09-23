@@ -143,7 +143,8 @@ More types are supported, such as:
 -  Enums
 -  ...
 
-Please read the test code to find more examples.
+All the base types have a default example field. Please read the test
+code to find more examples.
 
 .. |build status| image:: https://img.shields.io/travis/fcracker79/pycomb/master.svg?style=flat-square
    :target: https://travis-ci.org/fcracker79/pycomb
