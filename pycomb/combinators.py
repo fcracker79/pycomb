@@ -518,3 +518,51 @@ def regexp_group(pattern: str, *combinators, example=None, name=None):
     }
     _regexp_group.example = example
     return _regexp_group
+
+
+def dictionary(key_combinator, value_combinator, example=None, name=None):
+    name = name or 'dictionary({}: {})'.format(key_combinator.meta['name'], value_combinator.meta['name'])
+
+    def _dictionary(x, ctx=None):
+        new_ctx = context.create(ctx)
+        if new_ctx.production_mode:
+            return x
+
+        if new_ctx.empty:
+            new_ctx.append(name)
+
+        is_type = hasattr(x, '__getitem__') and hasattr(x, 'items') and callable(x.items)
+        assert_type(is_type, ctx=new_ctx, expected=name, found_type=type(x))
+
+        # Cannot proceed, this has no '[]' access.
+        if not is_type:
+            return x
+
+        for k, v in x.items():
+            field_new_ctx_key = context.create(new_ctx)
+            field_new_ctx_value = context.create(new_ctx)
+            field_new_ctx_key.append(k)
+            field_new_ctx_value.append('[{}]'.format(k), separator='')
+            key_combinator(k, ctx=field_new_ctx_key)
+            value_combinator(v, ctx=field_new_ctx_value)
+
+        return x
+
+    def _is_type(d):
+        return hasattr(d, '__getitem__') and hasattr(d, 'items') and callable(d.items) and \
+               all(key_combinator.is_type(k) and value_combinator.is_type(v) for k, v in d.items())
+
+    def _build_example():
+        try:
+            result = {key_combinator.example: value_combinator.example}
+        except:
+            result = None
+        return result
+
+    _dictionary.is_type = _is_type
+    _dictionary.example = example or _build_example()
+    _dictionary.meta = {
+        'name': name
+    }
+
+    return _dictionary
