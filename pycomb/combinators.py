@@ -24,7 +24,7 @@ def irreducible(predicate, example, name='Irreducible'):
 
         if new_ctx.empty:
             new_ctx.append(name)
-
+        new_ctx.validating_value = value
         assert_type(_irreducible.is_type(value), ctx=new_ctx, expected=name, found_type=type(value))
 
         return value
@@ -62,7 +62,7 @@ def list(combinator_element, name=None):
 
         if new_ctx_list.empty:
             new_ctx_list.append(name)
-
+        new_ctx_list.validating_value = x
         assert_type(x is not None, ctx=new_ctx_list, expected=name, found_type=type(None))
         if not x:
             return None
@@ -109,7 +109,7 @@ def sequence(combinator_element, name=None):
 
         if new_ctx_sequence.empty:
             new_ctx_sequence.append(name)
-
+        new_ctx_sequence.validating_value = x
         assert_type(x is not None, ctx=new_ctx_sequence, expected=name, found_type=type(None))
         if not x:
             return None
@@ -164,6 +164,7 @@ def struct(combinators, name: str=None, strict: bool=False):
         if ctx.empty:
             ctx.append(name)
 
+        ctx.validating_value = x
         is_type = _struct.is_type(x) or (type(x) is dict and (not strict or all(k in combinators for k in x.keys())))
         assert_type(is_type, ctx=ctx, expected=name, found_type=type(x))
 
@@ -204,6 +205,7 @@ def maybe(combinator, name=None):
         if new_ctx.production_mode:
             return x
 
+        new_ctx.validating_value = x
         new_ctx.append(name)
         assert_type(
             _maybe.is_type(x), ctx=new_ctx,
@@ -237,6 +239,7 @@ def union(*combinators, name=None, dispatcher=None):
         if new_ctx.production_mode:
             return x
 
+        new_ctx.validating_value = x
         if new_ctx.empty:
             new_ctx.append(name)
         assert_type(_union.is_type(x), ctx=new_ctx,
@@ -275,6 +278,7 @@ def intersection(*combinators, example=None, name=None, dispatcher=None):
         if new_ctx.production_mode:
             return x
 
+        new_ctx.validating_value = x
         new_ctx.append(name)
         assert_type(_intersection.is_type(x), ctx=new_ctx,
                     expected=' or '.join(map(lambda d: get_type_name(d), combinators)),
@@ -308,6 +312,7 @@ def subtype(combinator, condition, example=None, name=None):
 
         if new_ctx.empty:
             new_ctx.append(name)
+        new_ctx.validating_value = x
         combinator(x, new_ctx)
         assert_type(condition(x), ctx=new_ctx, expected=name, found_type=type(x))
 
@@ -338,6 +343,7 @@ def enum(values, name=None):
         if new_ctx.empty:
             new_ctx.append(name)
 
+        new_ctx.validating_value = x
         is_type = _enum.is_type(x)
         assert_type(
             is_type, ctx=new_ctx,
@@ -368,15 +374,16 @@ def _typedef(args, kwargs, ctx=None):
     def wrapper(fun):
         @wraps(fun)
         def f(*inner_args, **inner_kwargs):
+            ctx.validating_value = fun
             assert_type(
                 len(args) == len(inner_args), ctx=ctx, expected='{} arguments'.format(len(args)),
                 found_type='{} arguments'.format(len(inner_args)))
 
             for i in range(len(args)):
-                args[i](inner_args[i])
+                args[i](inner_args[i], ctx=ctx)
 
             for k in kwargs:
-                kwargs[k](inner_kwargs.get(k))
+                kwargs[k](inner_kwargs.get(k), ctx=ctx)
 
             typesafe_args = (args[i](inner_args[i]) for i in range(len(args)))
             typesafe_kwargs = {k: kwargs[k](inner_kwargs[k]) for k in kwargs}
@@ -398,12 +405,12 @@ def function(*args, **kwargs):
         _orig_list(map(lambda k: '{}={}'.format(k, get_type_name(kwargs[k])), kwargs))))
 
     def _function(x, ctx=None):
-        new_ctx = context.create(ctx)
+        new_ctx = context.create(base_ctx=_function.pycomb_ctx or ctx)
         if new_ctx.production_mode:
             return x
 
         new_ctx.append(name)
-
+        new_ctx.validating_value = x
         assert_type(_function.is_type(x), ctx=new_ctx, expected=name, found_type=type(x))
 
         return x if '__pycomb__meta__' in dir(x) else _typedef(args, kwargs, ctx=new_ctx)(x)
@@ -414,9 +421,17 @@ def function(*args, **kwargs):
         'args': args,
         'kwargs': kwargs
     }
+    _function.pycomb_ctx = None
     # TODO I should declare a function based on the combinators.
     _function.example = lambda *a, **kw: None
+
+    def with_context(new_ctx):
+        _function.pycomb_ctx = new_ctx
+        return _function
+
+    _function.with_context = with_context
     return _function
+
 
 Number = union(Int, Float, name='Number')
 
@@ -431,7 +446,7 @@ def generic_object(fields_combinators: dict, object_type, example=None, name=Non
 
         if new_ctx.empty:
             new_ctx.append(name)
-
+        new_ctx.validating_value = x
         assert_type(type(x) == object_type, ctx=new_ctx, expected=name, found_type=type(x))
 
         for field in fields_combinators:
@@ -484,6 +499,7 @@ def regexp_group(pattern: str, *combinators, example=None, name=None):
         if new_ctx.empty:
             new_ctx.append(name)
 
+        new_ctx.validating_value = value
         if not isinstance(value, str):
             assert_type(False, ctx=new_ctx, expected=name, found_type=type(value))
         matcher = pattern.match(value)
@@ -531,6 +547,7 @@ def dictionary(key_combinator, value_combinator, example=None, name=None):
         if new_ctx.empty:
             new_ctx.append(name)
 
+        new_ctx.validating_value = x
         is_type = hasattr(x, '__getitem__') and hasattr(x, 'items') and callable(x.items)
         assert_type(is_type, ctx=new_ctx, expected=name, found_type=type(x))
 

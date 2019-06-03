@@ -19,6 +19,9 @@ class ValidationErrorObservable(metaclass=abc.ABCMeta):
 
 
 class ValidationContext(ValidationErrorObservable, metaclass=abc.ABCMeta):
+    def __init__(self):
+        self.validating_value = None
+
     @abc.abstractmethod
     def append(self, path_element):
         pass  # pragma: no cover
