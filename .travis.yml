@@ -5,8 +5,9 @@ matrix:
       sudo: true
 language: python
 python:
-  - "3.2"
-  - "3.3"
+# Travis does not seem to support these versions any more
+#   - "3.2"
+#   - "3.3"
   - "3.4"
   - "3.5"
   - "3.6"
